@@ -58,6 +58,8 @@ using namespace std::chrono_literals;
 //360 x 640 (Galaxy S5)
 //640 x 480 (480i - Smallest PC monitor)
 
+#define PLAYER_SPEED 0.1
+
 int windowWidth = 240;
 int windowHeight = 320;
 SDL_Point mousePos;
@@ -466,8 +468,20 @@ int eventWatch(void* userdata, SDL_Event* event)
     return 0;
 }
 
+struct Entity {
+    SDL_FRect r{};
+    int dx = 0;
+    int dy = 0;
+};
+
+Entity player;
+SDL_Texture* playerT;
+SDL_Texture* bgT;
+Clock globalClock;
+
 void mainLoop()
 {
+    float deltaTime = globalClock.restart();
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT || event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
@@ -498,8 +512,28 @@ void mainLoop()
             realMousePos.y = event.motion.y;
         }
     }
+    player.dx = 0;
+    player.dy = 0;
+    if (keys[SDL_SCANCODE_A]) {
+        player.dx = -1;
+    }
+    else if (keys[SDL_SCANCODE_D]) {
+        player.dx = 1;
+    }
+    if (keys[SDL_SCANCODE_W]) {
+        player.dy = -1;
+    }
+    else if (keys[SDL_SCANCODE_S]) {
+        player.dy = 1;
+    }
+    player.r.x += player.dx * deltaTime * PLAYER_SPEED;
+    player.r.y += player.dy * deltaTime * PLAYER_SPEED;
+    player.r.x = std::clamp(player.r.x, 0.f, windowWidth - player.r.w);
+    player.r.y = std::clamp(player.r.y, 0.f, windowHeight - player.r.h);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
+    SDL_RenderCopyF(renderer, bgT, 0, 0);
+    SDL_RenderCopyF(renderer, playerT, 0, &player.r);
     SDL_RenderPresent(renderer);
 }
 
@@ -518,6 +552,13 @@ int main(int argc, char* argv[])
     SDL_GetWindowSize(window, &w, &h);
     SDL_RenderSetScale(renderer, w / (float)windowWidth, h / (float)windowHeight);
     SDL_AddEventWatch(eventWatch, 0);
+    playerT = IMG_LoadTexture(renderer, "res/player.png");
+    bgT = IMG_LoadTexture(renderer, "res/bg.png");
+    player.r.w = 32;
+    player.r.h = 32;
+    player.r.x = windowWidth / 2 - player.r.w / 2;
+    player.r.y = windowHeight - player.r.h;
+    globalClock.restart();
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(mainLoop, 0, 1);
 #else
