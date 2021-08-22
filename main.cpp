@@ -58,10 +58,10 @@ using namespace std::chrono_literals;
 //360 x 640 (Galaxy S5)
 //640 x 480 (480i - Smallest PC monitor)
 
-#define PLAYER_SPEED 0.1
+#define PLAYER_SPEED 0.3
 #define BULLET_SPEED 0.1
 #define ENEMY_SPEED 0.1
-#define BULLET_SPAWN_DELAY_IN_MS 1000
+#define BULLET_SPAWN_DELAY_IN_MS 800
 #define ENEMY_SPAWN_DELAY_IN_MS 1000
 
 int windowWidth = 240;
@@ -488,6 +488,7 @@ std::vector<Entity> bullets;
 Clock bulletClock;
 Clock enemyClock;
 std::vector<Entity> enemies;
+Text killPoints;
 
 void mainLoop()
 {
@@ -569,7 +570,18 @@ void mainLoop()
     }
     for (int i = 0; i < enemies.size(); ++i) {
         enemies[i].dy = 1;
-        enemies[i].r.y += enemies[i].dy * deltaTime*ENEMY_SPEED;
+        enemies[i].r.y += enemies[i].dy * deltaTime * ENEMY_SPEED;
+    }
+deleteCollidingBegin:
+    for (int i = 0; i < bullets.size(); ++i) {
+        for (int j = 0; j < enemies.size(); ++j) {
+            if (SDL_HasIntersectionF(&bullets[i].r, &enemies[j].r)) {
+                enemies.erase(enemies.begin() + j--);
+                bullets.erase(bullets.begin() + i--);
+                killPoints.setText(renderer, robotoF, std::stoi(killPoints.text) + 1);
+                goto deleteCollidingBegin;
+            }
+        }
     }
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
@@ -581,6 +593,7 @@ void mainLoop()
     for (int i = 0; i < enemies.size(); ++i) {
         SDL_RenderCopyF(renderer, enemyT, 0, &enemies[i].r);
     }
+    killPoints.draw(renderer);
     SDL_RenderPresent(renderer);
 }
 
@@ -607,6 +620,11 @@ int main(int argc, char* argv[])
     player.r.h = 32;
     player.r.x = windowWidth / 2 - player.r.w / 2;
     player.r.y = windowHeight - player.r.h;
+    killPoints.dstR.w=30;
+    killPoints.dstR.h=20;
+    killPoints.dstR.x=windowWidth/2-killPoints.dstR.w/2;
+    killPoints.dstR.y=0;
+    killPoints.setText(renderer, robotoF, "0");
     globalClock.restart();
     bulletClock.restart();
     enemyClock.restart();
