@@ -60,6 +60,9 @@ using namespace std::chrono_literals;
 
 #define PLAYER_SPEED 0.1
 #define BULLET_SPEED 0.1
+#define ENEMY_SPEED 0.1
+#define BULLET_SPAWN_DELAY_IN_MS 1000
+#define ENEMY_SPAWN_DELAY_IN_MS 1000
 
 int windowWidth = 240;
 int windowHeight = 320;
@@ -479,9 +482,12 @@ Entity player;
 SDL_Texture* playerT;
 SDL_Texture* bgT;
 SDL_Texture* bulletT;
+SDL_Texture* enemyT;
 Clock globalClock;
 std::vector<Entity> bullets;
 Clock bulletClock;
+Clock enemyClock;
+std::vector<Entity> enemies;
 
 void mainLoop()
 {
@@ -531,7 +537,7 @@ void mainLoop()
         player.dy = 1;
     }
     if (keys[SDL_SCANCODE_SPACE]) {
-        if (bulletClock.getElapsedTime() > 1000) {
+        if (bulletClock.getElapsedTime() > BULLET_SPAWN_DELAY_IN_MS) {
             bullets.push_back(Entity());
             bullets.back().r.w = 32;
             bullets.back().r.h = 32;
@@ -553,12 +559,27 @@ void mainLoop()
             bullets.erase(bullets.begin() + i--);
         }
     }
+    if (enemyClock.getElapsedTime() > ENEMY_SPAWN_DELAY_IN_MS) {
+        enemies.push_back(Entity());
+        enemies.back().r.w = 32;
+        enemies.back().r.h = 32;
+        enemies.back().r.x = random(0, windowWidth - enemies.back().r.w);
+        enemies.back().r.y = -enemies.back().r.h;
+        enemyClock.restart();
+    }
+    for (int i = 0; i < enemies.size(); ++i) {
+        enemies[i].dy = 1;
+        enemies[i].r.y += enemies[i].dy * deltaTime*ENEMY_SPEED;
+    }
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
     SDL_RenderCopyF(renderer, bgT, 0, 0);
     SDL_RenderCopyF(renderer, playerT, 0, &player.r);
     for (int i = 0; i < bullets.size(); ++i) {
         SDL_RenderCopyF(renderer, bulletT, 0, &bullets[i].r);
+    }
+    for (int i = 0; i < enemies.size(); ++i) {
+        SDL_RenderCopyF(renderer, enemyT, 0, &enemies[i].r);
     }
     SDL_RenderPresent(renderer);
 }
@@ -581,12 +602,14 @@ int main(int argc, char* argv[])
     playerT = IMG_LoadTexture(renderer, "res/player.png");
     bgT = IMG_LoadTexture(renderer, "res/bg.png");
     bulletT = IMG_LoadTexture(renderer, "res/bullet.png");
+    enemyT = IMG_LoadTexture(renderer, "res/enemy.png");
     player.r.w = 32;
     player.r.h = 32;
     player.r.x = windowWidth / 2 - player.r.w / 2;
     player.r.y = windowHeight - player.r.h;
     globalClock.restart();
     bulletClock.restart();
+    enemyClock.restart();
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(mainLoop, 0, 1);
 #else
