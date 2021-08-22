@@ -476,6 +476,7 @@ struct Entity {
 
 Entity player;
 SDL_Texture* playerT;
+SDL_Texture* bgT;
 Clock globalClock;
 
 void mainLoop()
@@ -525,12 +526,13 @@ void mainLoop()
     else if (keys[SDL_SCANCODE_S]) {
         player.dy = 1;
     }
-    player.r.x += player.dx * deltaTime*PLAYER_SPEED;
-    player.r.y += player.dy * deltaTime*PLAYER_SPEED;
-    player.r.x = std::clamp(player.r.x, 0.f, windowWidth-player.r.w);
-    player.r.y = std::clamp(player.r.y, 0.f, windowHeight-player.r.h);
+    player.r.x += player.dx * deltaTime * PLAYER_SPEED;
+    player.r.y += player.dy * deltaTime * PLAYER_SPEED;
+    player.r.x = std::clamp(player.r.x, 0.f, windowWidth - player.r.w);
+    player.r.y = std::clamp(player.r.y, 0.f, windowHeight - player.r.h);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
+    SDL_RenderCopyF(renderer, bgT, 0, 0);
     SDL_RenderCopyF(renderer, playerT, 0, &player.r);
     SDL_RenderPresent(renderer);
 }
@@ -551,6 +553,7 @@ int main(int argc, char* argv[])
     SDL_RenderSetScale(renderer, w / (float)windowWidth, h / (float)windowHeight);
     SDL_AddEventWatch(eventWatch, 0);
     playerT = IMG_LoadTexture(renderer, "res/player.png");
+    bgT = IMG_LoadTexture(renderer, "res/bg.png");
     player.r.w = 32;
     player.r.h = 32;
     player.r.x = windowWidth / 2 - player.r.w / 2;
