@@ -1,0 +1,3 @@
+To see compile errors compile manually using emsdk\emcmdprompt.bat.
+
+If there will be errors in port try playing around template.html e.g. padding may break mouse cursor position.
