@@ -59,6 +59,7 @@ using namespace std::chrono_literals;
 //640 x 480 (480i - Smallest PC monitor)
 
 #define PLAYER_SPEED 0.1
+#define BULLET_SPEED 0.1
 
 int windowWidth = 240;
 int windowHeight = 320;
@@ -477,7 +478,10 @@ struct Entity {
 Entity player;
 SDL_Texture* playerT;
 SDL_Texture* bgT;
+SDL_Texture* bulletT;
 Clock globalClock;
+std::vector<Entity> bullets;
+Clock bulletClock;
 
 void mainLoop()
 {
@@ -526,14 +530,36 @@ void mainLoop()
     else if (keys[SDL_SCANCODE_S]) {
         player.dy = 1;
     }
+    if (keys[SDL_SCANCODE_SPACE]) {
+        if (bulletClock.getElapsedTime() > 1000) {
+            bullets.push_back(Entity());
+            bullets.back().r.w = 32;
+            bullets.back().r.h = 32;
+            bullets.back().r.x = player.r.x + player.r.w / 2 - bullets.back().r.w / 2;
+            bullets.back().r.y = player.r.y - bullets.back().r.h / 2;
+            bullets.back().dy = -1;
+            bulletClock.restart();
+        }
+    }
+    for (int i = 0; i < bullets.size(); ++i) {
+        bullets[i].r.y += bullets[i].dy * deltaTime * BULLET_SPEED;
+    }
     player.r.x += player.dx * deltaTime * PLAYER_SPEED;
     player.r.y += player.dy * deltaTime * PLAYER_SPEED;
     player.r.x = std::clamp(player.r.x, 0.f, windowWidth - player.r.w);
     player.r.y = std::clamp(player.r.y, 0.f, windowHeight - player.r.h);
+    for (int i = 0; i < bullets.size(); ++i) {
+        if (bullets[i].r.y + bullets[i].r.h < 0) {
+            bullets.erase(bullets.begin() + i--);
+        }
+    }
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
     SDL_RenderCopyF(renderer, bgT, 0, 0);
     SDL_RenderCopyF(renderer, playerT, 0, &player.r);
+    for (int i = 0; i < bullets.size(); ++i) {
+        SDL_RenderCopyF(renderer, bulletT, 0, &bullets[i].r);
+    }
     SDL_RenderPresent(renderer);
 }
 
@@ -554,11 +580,13 @@ int main(int argc, char* argv[])
     SDL_AddEventWatch(eventWatch, 0);
     playerT = IMG_LoadTexture(renderer, "res/player.png");
     bgT = IMG_LoadTexture(renderer, "res/bg.png");
+    bulletT = IMG_LoadTexture(renderer, "res/bullet.png");
     player.r.w = 32;
     player.r.h = 32;
     player.r.x = windowWidth / 2 - player.r.w / 2;
     player.r.y = windowHeight - player.r.h;
     globalClock.restart();
+    bulletClock.restart();
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(mainLoop, 0, 1);
 #else
