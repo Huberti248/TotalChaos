@@ -488,7 +488,8 @@ std::vector<Entity> bullets;
 Clock bulletClock;
 Clock enemyClock;
 std::vector<Entity> enemies;
-Text killPoints;
+Text killPointsText;
+Text healthText;
 
 void mainLoop()
 {
@@ -578,7 +579,7 @@ deleteCollidingBegin:
             if (SDL_HasIntersectionF(&bullets[i].r, &enemies[j].r)) {
                 enemies.erase(enemies.begin() + j--);
                 bullets.erase(bullets.begin() + i--);
-                killPoints.setText(renderer, robotoF, std::stoi(killPoints.text) + 1);
+                killPointsText.setText(renderer, robotoF, std::stoi(killPointsText.text) + 1);
                 goto deleteCollidingBegin;
             }
         }
@@ -593,7 +594,8 @@ deleteCollidingBegin:
     for (int i = 0; i < enemies.size(); ++i) {
         SDL_RenderCopyF(renderer, enemyT, 0, &enemies[i].r);
     }
-    killPoints.draw(renderer);
+    killPointsText.draw(renderer);
+    healthText.draw(renderer);
     SDL_RenderPresent(renderer);
 }
 
@@ -620,11 +622,16 @@ int main(int argc, char* argv[])
     player.r.h = 32;
     player.r.x = windowWidth / 2 - player.r.w / 2;
     player.r.y = windowHeight - player.r.h;
-    killPoints.dstR.w=30;
-    killPoints.dstR.h=20;
-    killPoints.dstR.x=windowWidth/2-killPoints.dstR.w/2;
-    killPoints.dstR.y=0;
-    killPoints.setText(renderer, robotoF, "0");
+    killPointsText.dstR.w = 30;
+    killPointsText.dstR.h = 20;
+    killPointsText.dstR.x = windowWidth / 2 - killPointsText.dstR.w / 2;
+    killPointsText.dstR.y = 0;
+    killPointsText.setText(renderer, robotoF, "0");
+    healthText.dstR.w = 30;
+    healthText.dstR.h = 20;
+    healthText.dstR.x = windowWidth - healthText.dstR.w;
+    healthText.dstR.y = 0;
+    healthText.setText(renderer, robotoF, "100", { 255, 0, 0 });
     globalClock.restart();
     bulletClock.restart();
     enemyClock.restart();
