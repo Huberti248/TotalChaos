@@ -45,3 +45,39 @@ SDL_FPoint MathUtils::GetNormalized(const SDL_Point& point) {
 
 	return res;
 }
+
+void MathUtils::Normalize(SDL_FPoint* point) {
+	float mag = GetMagnitude(point->x, point->y);
+
+	point->x = point->x / mag;
+	point->y = point->y / mag;
+}
+
+SDL_FPoint MathUtils::VectorSubstract(const SDL_FPoint& a, const SDL_FPoint& b) {
+	SDL_FPoint res = {
+		a.x - b.x,
+		a.y - b.y
+	};
+	return res;
+}
+
+SDL_FPoint MathUtils::VectorSubstract(const SDL_Point& a, const SDL_Point& b) {
+	SDL_FPoint res = {
+		a.x - b.x,
+		a.y - b.y
+	};
+	return res;
+}
+
+void MathUtils::VectorSubstract(SDL_Point* a, const SDL_Point& b) {
+	a->x -= b.x;
+	a->y -= b.y;
+}
+
+SDL_FPoint MathUtils::ToSDL_FPoint(const SDL_Point& point) {
+	SDL_FPoint res = {
+		(float)point.x,
+		(float)point.y
+	};
+	return res;
+}

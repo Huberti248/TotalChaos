@@ -466,16 +466,24 @@ void mainLoop()
 			bullets.back().r.y = player.r.y - bullets.back().r.h / 2;
 
 			//Get the direction on dy and dx from the normalized position of the mouse
-			//SDL_FPoint p = MathUtils::GetNormalized(mousePos);
-			//std::cout << p.x << ", " << p.y << std::endl;
-			bullets.back().dy = -1;
-			//bullets.back().dx = p.x;
+			SDL_FPoint fMousePos = MathUtils::ToSDL_FPoint(mousePos);
+			SDL_FPoint playerPos = {
+				player.r.x,
+				player.r.y
+			};
+
+			SDL_FPoint finalPos = MathUtils::VectorSubstract(fMousePos, playerPos);
+
+			MathUtils::Normalize(&finalPos);
+
+			bullets.back().dy = finalPos.y;
+			bullets.back().dx = finalPos.x;
 			bulletClock.restart();
 		}
 	}
 	for (int i = 0; i < bullets.size(); ++i) {
 		bullets[i].r.y += bullets[i].dy * deltaTime * BULLET_SPEED;
-		//bullets[i].r.x += bullets[i].dx * deltaTime * BULLET_SPEED;
+		bullets[i].r.x += bullets[i].dx * deltaTime * BULLET_SPEED;
 	}
 	player.r.x += player.dx * deltaTime * PLAYER_SPEED;
 	player.r.y += player.dy * deltaTime * PLAYER_SPEED;
