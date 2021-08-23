@@ -545,7 +545,7 @@ deleteCollidingBegin:
 		//Enemy collision
 		for (int j = 0; j < enemies.size(); ++j) {
 			//Layer control
-			if (bullets[i].GetTargetMask() < TargetMask::EnemiesMask) continue;
+			if ((bullets[i].GetTargetMask() & TargetMask::EnemiesMask) == 0) continue;
 			if (SDL_HasIntersectionF(&bullets[i].r, &enemies[j].r)) {
 				enemies.erase(enemies.begin() + j--);
 				bullets.erase(bullets.begin() + i--);
