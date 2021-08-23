@@ -105,6 +105,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bullet.h" />
+    <ClInclude Include="Clock.h" />
     <ClInclude Include="Definitions.h" />
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="SpawnPlace.h" />

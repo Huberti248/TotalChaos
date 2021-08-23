@@ -53,6 +53,7 @@ using namespace std::chrono_literals;
 #include "Player.h"
 #include "Enemy.h"
 #include "Bullet.h"
+#include "Clock.h"
 
 // NOTE: Remember to uncomment it on every release
 //#define RELEASE
@@ -72,6 +73,8 @@ using namespace std::chrono_literals;
 #define BULLET_SPAWN_DELAY_IN_MS 500
 #define ENEMY_SPAWN_DELAY_IN_MS 1000
 #define BULLET_SPLIT_DELAY_IN_MS 1000
+#define MINIMUM_INTERVAL_BULLET_MS 500
+#define MAXIMUM_INTERVAL_BULLET_MS 1500
 
 SDL_Window* window;
 SDL_Renderer* renderer;
@@ -84,3 +87,4 @@ bool keys[SDL_NUM_SCANCODES];
 bool buttons[SDL_BUTTON_X2 + 1];
 TTF_Font* robotoF;
 bool running = true;
+

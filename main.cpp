@@ -266,25 +266,6 @@ int SDL_RenderFillCircle(SDL_Renderer* renderer, int x, int y, int radius)
 	return status;
 }
 
-struct Clock {
-	Uint64 start = SDL_GetPerformanceCounter();
-
-	float getElapsedTime()
-	{
-		Uint64 stop = SDL_GetPerformanceCounter();
-		float secondsElapsed = (stop - start) / (float)SDL_GetPerformanceFrequency();
-		return secondsElapsed * 1000;
-	}
-
-	float restart()
-	{
-		Uint64 stop = SDL_GetPerformanceCounter();
-		float secondsElapsed = (stop - start) / (float)SDL_GetPerformanceFrequency();
-		start = SDL_GetPerformanceCounter();
-		return secondsElapsed * 1000;
-	}
-};
-
 SDL_bool SDL_FRectEmpty(const SDL_FRect* r)
 {
 	return ((!r) || (r->w <= 0) || (r->h <= 0)) ? SDL_TRUE : SDL_FALSE;
@@ -503,7 +484,9 @@ void mainLoop()
 		}
 	}
 	if (enemyClock.getElapsedTime() > ENEMY_SPAWN_DELAY_IN_MS) {
-		enemies.push_back(Enemy());
+		//Create a random interval for the shooting between a range defined by constants
+		int bulletInterval = random(MINIMUM_INTERVAL_BULLET_MS, MAXIMUM_INTERVAL_BULLET_MS);
+		enemies.push_back(Enemy(bulletInterval));
 		enemies.back().r.w = 32;
 		enemies.back().r.h = 32;
 		enemies.back().spawnPlace = (SpawnPlace)random(0, 3);
@@ -588,7 +571,7 @@ deleteCollidingBegin:
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 	SDL_RenderClear(renderer);
 	SDL_RenderCopyF(renderer, bgT, 0, 0);
-	PlayerRotation(playerT, player, mousePos, renderer);
+	RotateEntityTowards(playerT, player, mousePos, renderer);
 	//SDL_RenderCopyF(renderer, playerT, 0, &player.r);
 	for (int i = 0; i < bullets.size(); ++i) {
 		SDL_RenderCopyF(renderer, bulletT, 0, &bullets[i].r);
