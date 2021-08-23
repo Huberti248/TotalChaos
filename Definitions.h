@@ -73,6 +73,8 @@ using namespace std::chrono_literals;
 #define ENEMY_SPAWN_DELAY_IN_MS 1000
 #define BULLET_SPLIT_DELAY_IN_MS 1000
 
+#define BULLET_COLLISION_DELAY_IN_MS 100
+
 SDL_Window* window;
 SDL_Renderer* renderer;
 int windowWidth = 1280;

@@ -11,6 +11,8 @@ public:
     MathUtils();
     ~MathUtils();
     
+    static SDL_FPoint CalculateCollision(float v1, float v2, float t1, float t2, float tContact);
+
     static float GetAngle(int x1, int y1, int x2, int y2);
 
     static float MathUtils::GetDotProduct(SDL_FPoint x, SDL_FPoint y);

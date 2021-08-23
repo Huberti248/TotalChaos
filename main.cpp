@@ -561,6 +561,8 @@ deleteCollidingBegin:
 			}
 		}
 
+		
+
 		if ((bullets[i].lifetime + deltaTime) > BULLET_SPLIT_DELAY_IN_MS) {
 			bullets[i].Split(&bullets);
             bullets[i].lifetime = 0;
@@ -569,10 +571,44 @@ deleteCollidingBegin:
 			bullets[i].lifetime += deltaTime;
         }
 
+		//Bullet collision
+        if (i != (bullets.size() - 1)) {
+            for (int j = i + 1; j < bullets.size(); ++j) {
+                bool timePassed = (bullets[i].lifetime > BULLET_COLLISION_DELAY_IN_MS) && (bullets[j].lifetime > BULLET_COLLISION_DELAY_IN_MS);
+                if (SDL_HasIntersectionF(&bullets[i].r, &bullets[j].r) && timePassed) {
+                    Bullet a = bullets[i];
+                    Bullet b = bullets[j];
+
+                    float v1 = MathUtils::GetMagnitude(a.dx, a.dy);
+                    float v2 = MathUtils::GetMagnitude(b.dx, b.dy);
+
+					float x1 = a.r.x + a.r.w / 2.0f;
+                    float y1 = a.r.y + a.r.h / 2.0f;
+                    float x2 = b.r.x + b.r.w / 2.0f;
+                    float y2 = b.r.y + b.r.h / 2.0f;
+
+                    float t1 = MathUtils::GetAngle(a.dx, a.dy, x1, y1);
+                    float t2 = MathUtils::GetAngle(b.dx, b.dy, x2, y2);
+
+                    float tContact = MathUtils::GetAngle(x2, y2, x1, y1);
+
+                    SDL_FPoint directionA = MathUtils::CalculateCollision(v1, v2, t1, t2, tContact);
+                    MathUtils::Normalize(&directionA);
+                    SDL_FPoint directionB = MathUtils::CalculateCollision(v2, v1, t2, t1, tContact);
+                    MathUtils::Normalize(&directionB);
+
+                    bullets[i].dx = directionA.x;
+                    bullets[i].dy = directionA.y;
+                    bullets[j].dx = directionB.x;
+                    bullets[j].dy = directionB.y;
+                }
+            }
+        }
+
 		if (!SDL_HasIntersectionF(&bullets[i].r, &windowR)) {
             bullets.erase(bullets.begin() + i--);
 		}
-	}
+	}        
 
 	for (int i = 0; i < enemies.size(); ++i) {
 		SDL_FRect enemyR = enemies[i].r;
