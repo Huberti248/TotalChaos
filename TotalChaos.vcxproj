@@ -103,6 +103,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Definitions.h" />
+    <ClInclude Include="SpawnPlace.h" />
     <ClInclude Include="Entity.h" />
     <ClInclude Include="MathUtils.h" />
     <ClInclude Include="Movement.h" />

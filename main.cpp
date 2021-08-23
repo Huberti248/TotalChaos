@@ -457,7 +457,7 @@ void mainLoop()
     else if (keys[SDL_SCANCODE_S]) {
         player.dy = 1;
     }
-    if (keys[SDL_SCANCODE_SPACE]) {
+    if (buttons[SDL_BUTTON_LEFT]) {
         if (bulletClock.getElapsedTime() > BULLET_SPAWN_DELAY_IN_MS) {
             //TODO: Encapsulate this in a function (and probably a different file)
             bullets.push_back(Entity());
@@ -499,12 +499,31 @@ void mainLoop()
         enemies.push_back(Entity());
         enemies.back().r.w = 32;
         enemies.back().r.h = 32;
-        enemies.back().r.x = random(0, windowWidth - enemies.back().r.w);
-        enemies.back().r.y = -enemies.back().r.h;
+        enemies.back().spawnPlace = (SpawnPlace)random(0, 3);
+        if (enemies.back().spawnPlace == SpawnPlace::Up) {
+            enemies.back().r.x = random(0, windowWidth - enemies.back().r.w);
+            enemies.back().r.y = 0;
+            enemies.back().dy = 1;
+        }
+        else if (enemies.back().spawnPlace == SpawnPlace::Down) {
+            enemies.back().r.x = random(0, windowWidth - enemies.back().r.w);
+            enemies.back().r.y = windowHeight;
+            enemies.back().dy = -1;
+        }
+        else if (enemies.back().spawnPlace == SpawnPlace::Left) {
+            enemies.back().r.x = -enemies.back().r.w;
+            enemies.back().r.y = random(0, windowHeight - enemies.back().r.h);
+            enemies.back().dx = 1;
+        }
+        else if (enemies.back().spawnPlace == SpawnPlace::Right) {
+            enemies.back().r.x = windowWidth;
+            enemies.back().r.y = random(0, windowHeight - enemies.back().r.h);
+            enemies.back().dx = -1;
+        }
         enemyClock.restart();
     }
     for (int i = 0; i < enemies.size(); ++i) {
-        enemies[i].dy = 1;
+        enemies[i].r.x += enemies[i].dx * deltaTime * ENEMY_SPEED;
         enemies[i].r.y += enemies[i].dy * deltaTime * ENEMY_SPEED;
     }
 deleteCollidingBegin:
@@ -527,7 +546,18 @@ deleteCollidingBegin:
         SDL_RenderCopyF(renderer, bulletT, 0, &bullets[i].r);
     }
     for (int i = 0; i < enemies.size(); ++i) {
-        SDL_RenderCopyF(renderer, enemyT, 0, &enemies[i].r);
+        if (enemies[i].spawnPlace == SpawnPlace::Up) {
+            SDL_RenderCopyExF(renderer, enemyT, 0, &enemies[i].r, 180, 0, SDL_FLIP_NONE);
+        }
+        else if (enemies[i].spawnPlace == SpawnPlace::Down) {
+            SDL_RenderCopyExF(renderer, enemyT, 0, &enemies[i].r, 0, 0, SDL_FLIP_NONE);
+        }
+        else if (enemies[i].spawnPlace == SpawnPlace::Left) {
+            SDL_RenderCopyExF(renderer, enemyT, 0, &enemies[i].r, 90, 0, SDL_FLIP_NONE);
+        }
+        else if (enemies[i].spawnPlace == SpawnPlace::Right) {
+            SDL_RenderCopyExF(renderer, enemyT, 0, &enemies[i].r, 270, 0, SDL_FLIP_NONE);
+        }
     }
     killPointsText.draw(renderer);
     healthText.draw(renderer);
