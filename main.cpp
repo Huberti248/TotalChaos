@@ -537,6 +537,21 @@ deleteCollidingBegin:
             }
         }
     }
+    for (int i = 0; i < enemies.size(); ++i) {
+        SDL_FRect windowR;
+        windowR.w = windowWidth;
+        windowR.h = windowHeight;
+        windowR.x = 0;
+        windowR.y = 0;
+        SDL_FRect enemyR = enemies[i].r;
+        --enemyR.x;
+        --enemyR.y;
+        enemyR.w += 2;
+        enemyR.h += 2;
+        if (!SDL_HasIntersectionF(&enemies[i].r, &windowR)) {
+            enemies.erase(enemies.begin() + i--);
+        }
+    }
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
     SDL_RenderCopyF(renderer, bgT, 0, 0);
