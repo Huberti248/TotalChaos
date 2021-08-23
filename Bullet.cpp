@@ -8,7 +8,9 @@ Bullet::Bullet(int targetMask) {
 void Bullet::Split(std::vector<Bullet>* bulletListRef) {
 	//Create a new bullet and add it to the bullet's list
     //Change the current bullet's layerMask to be targetting both enemies and player targetMask = (Player | Enemies);
-    Bullet splitBullet = Bullet(TargetMask::PlayerMask | TargetMask::EnemiesMask);
+    //In case the bullet was fired by an enemy, keep the player mask as the player's one
+    int targetMask = this->targetMask == 1 ? TargetMask::PlayerMask : TargetMask::PlayerMask | TargetMask::EnemiesMask;
+    Bullet splitBullet = Bullet(targetMask);
     splitBullet.r = this->r;
 
 	//Determine the direction by going the opposite of the current direction and offset it by +- 45°

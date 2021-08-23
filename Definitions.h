@@ -73,8 +73,8 @@ using namespace std::chrono_literals;
 #define BULLET_SPAWN_DELAY_IN_MS 500
 #define ENEMY_SPAWN_DELAY_IN_MS 1000
 #define BULLET_SPLIT_DELAY_IN_MS 1000
-#define MINIMUM_INTERVAL_BULLET_MS 500
-#define MAXIMUM_INTERVAL_BULLET_MS 1500
+#define MINIMUM_INTERVAL_BULLET_MS 2000
+#define MAXIMUM_INTERVAL_BULLET_MS 7000
 
 SDL_Window* window;
 SDL_Renderer* renderer;

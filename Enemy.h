@@ -2,6 +2,7 @@
 #include "Entity.h"
 #include "Clock.h"
 #include "Bullet.h"
+#include "Movement.h"
 
 class Enemy : public Entity {
 public:
@@ -9,7 +10,7 @@ public:
 
 	Enemy(int shootingInterval);
 
-	void Combat(SDL_Texture* enemyTexture, std::vector<Bullet>* bulletListRef);
+	void Combat(SDL_Texture* enemyTexture, std::vector<Bullet>* bulletListRef, const SDL_FPoint& playerPos, SDL_Renderer* renderer);
 
 private:
 	Clock shootingClock;

@@ -522,7 +522,7 @@ void mainLoop()
 
 deleteCollidingBegin:
 	for (int i = 0; i < bullets.size(); ++i) {
-		//Player collision (NOT TESTED YET)
+		//Player collision
 		if ((bullets[i].GetTargetMask() & TargetMask::PlayerMask) != 0) {
 			if (SDL_HasIntersectionF(&bullets[i].r, &player.r)) {
 				player.health--;
@@ -558,6 +558,12 @@ deleteCollidingBegin:
 	}
 
 	for (int i = 0; i < enemies.size(); ++i) {
+		SDL_FPoint playerPos = {
+			player.r.x,
+			player.r.y
+		};
+
+		enemies[i].Combat(enemyT, &bullets, playerPos, renderer);
 		SDL_FRect enemyR = enemies[i].r;
 		--enemyR.x;
 		--enemyR.y;
