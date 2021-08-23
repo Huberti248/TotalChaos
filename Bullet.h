@@ -2,14 +2,14 @@
 #include "Entity.h"
 #include <vector>
 
-enum class TargetMask {
-	Player = 1,
-	Enemies
+enum TargetMask {
+	PlayerMask = 1,
+	EnemiesMask
 };
 
 class Bullet : public Entity{
 public:
-	Bullet(TargetMask targetMask);
+	Bullet(int targetMask);
 
 	void Split(std::vector<Bullet>* bulletListRef);
 

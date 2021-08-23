@@ -460,7 +460,7 @@ void mainLoop()
 	if (buttons[SDL_BUTTON_LEFT]) {
 		if (bulletClock.getElapsedTime() > BULLET_SPAWN_DELAY_IN_MS) {
 			//TODO: Encapsulate this in a function (and probably a different file)
-			bullets.push_back(Bullet(TargetMask::Enemies));
+			bullets.push_back(Bullet(TargetMask::EnemiesMask));
 			bullets.back().r.w = 32;
 			bullets.back().r.h = 32;
 			bullets.back().r.x = player.r.x + player.r.w / 2 - bullets.back().r.w / 2;
@@ -488,8 +488,8 @@ void mainLoop()
 	}
 	player.r.x += player.dx * deltaTime * PLAYER_SPEED;
 	player.r.y += player.dy * deltaTime * PLAYER_SPEED;
-	player.r.x = std::clamp(player.r.x, 0.f, windowWidth - player.r.w);
-	player.r.y = std::clamp(player.r.y, 0.f, windowHeight - player.r.h);
+	player.r.x = std::clamp(player.r.x, 0.0f, windowWidth - player.r.w);
+	player.r.y = std::clamp(player.r.y, 0.0f, windowHeight - player.r.h);
 	for (int i = 0; i < bullets.size(); ++i) {
 		if (bullets[i].r.y + bullets[i].r.h < 0) {
 			bullets.erase(bullets.begin() + i--);
@@ -531,11 +531,20 @@ void mainLoop()
 	}
 deleteCollidingBegin:
 	for (int i = 0; i < bullets.size(); ++i) {
-		
+		//Player collision (NOT TESTED YET)
+		if ((bullets[i].GetTargetMask() & TargetMask::PlayerMask) != 0) {
+			if (SDL_HasIntersectionF(&bullets[i].r, &player.r)) {
+				player.health--;
+				bullets.erase(bullets.begin() + i--);
+				healthText.setText(renderer, robotoF, player.health, { 255, 0, 0 });
+				goto deleteCollidingBegin;
+			}
+		}
+
 		//Enemy collision
 		for (int j = 0; j < enemies.size(); ++j) {
 			//Layer control
-			if (bullets[i].GetTargetMask() < TargetMask::Enemies) continue;
+			if (bullets[i].GetTargetMask() < TargetMask::EnemiesMask) continue;
 			if (SDL_HasIntersectionF(&bullets[i].r, &enemies[j].r)) {
 				enemies.erase(enemies.begin() + j--);
 				bullets.erase(bullets.begin() + i--);
@@ -574,7 +583,6 @@ deleteCollidingBegin:
 		SDL_RenderCopyExF(renderer, enemyT, 0, &enemies[i].r, angles[index], 0, SDL_FLIP_NONE);
 	}
 	killPointsText.draw(renderer);
-	healthText.setText(renderer, robotoF, player.health, { 255, 0, 0 });
 	healthText.draw(renderer);
 
 	SDL_RenderPresent(renderer);
