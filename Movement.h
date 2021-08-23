@@ -3,6 +3,7 @@
 #include <iostream>
 #include "Entity.h"
 #include "MathUtils.h"
+
 /// <summary>
 /// Rotates the player by the given angle 
 /// </summary>
