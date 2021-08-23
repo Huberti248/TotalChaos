@@ -1,7 +1,7 @@
 #include "Player.h"
 
 Player::Player() {
-	this->health = 5;
+	this->health = 100;
 }
 
 Player::Player(int health) {

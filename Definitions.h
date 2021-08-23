@@ -51,6 +51,8 @@ using namespace std::chrono_literals;
 #include "Movement.h"
 #include "Entity.h"
 #include "Player.h"
+#include "Enemy.h"
+#include "Bullet.h"
 
 // NOTE: Remember to uncomment it on every release
 //#define RELEASE
