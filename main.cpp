@@ -544,17 +544,20 @@ deleteCollidingBegin:
 	SDL_RenderClear(renderer);
 	SDL_RenderCopyF(renderer, bgT, 0, 0);
 	PlayerRotation(playerT, player, mousePos, renderer);
-	//SDL_RenderCopyF(renderer, playerT, 0, &player.r);
+
 	for (int i = 0; i < bullets.size(); ++i) {
 		SDL_RenderCopyF(renderer, bulletT, 0, &bullets[i].r);
 	}
 	for (int i = 0; i < enemies.size(); ++i) {
-		double angles[] = { 180.0, 0.0, 90.0, 270.0 };
+		//Based on the enemies' spawn position, rotate them to the proper angle
+		double angles[] = { 180.0, 0.0, 90.0, 270.0 }; // Array of rotations mapped to the enum of spawn positions
 		int index = (int)enemies[i].spawnPlace;
 		SDL_RenderCopyExF(renderer, enemyT, 0, &enemies[i].r, angles[index], 0, SDL_FLIP_NONE);
 		
 	}
 	killPointsText.draw(renderer);
+
+	healthText.setText(renderer, robotoF, player.health, { 255, 0, 0 });
 	healthText.draw(renderer);
 
 	SDL_RenderPresent(renderer);
