@@ -1,8 +1,14 @@
 #pragma once
 #include <SDL.h>
 
-struct Entity {
-    SDL_FRect r{};
-    int dx = 0;
-    int dy = 0;
+//Parent entity class
+class Entity {
+public:
+	SDL_FRect r{};
+	float dx;
+	float dy;
+
+	Entity();
+	~Entity();
+
 };

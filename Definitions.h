@@ -50,6 +50,7 @@ using namespace std::chrono_literals;
 #include "MathUtils.h"
 #include "Movement.h"
 #include "Entity.h"
+#include "Player.h"
 
 // NOTE: Remember to uncomment it on every release
 //#define RELEASE
