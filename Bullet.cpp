@@ -14,7 +14,7 @@ void Bullet::Split(std::vector<Bullet>* bulletListRef) {
     splitBullet.r = this->r;
 
 	//Determine the direction by going the opposite of the current direction and offset it by +- 45°
-    float angle = 45 * M_PI / 180;
+    float angle = 45 * M_PI / 180.0f;
     splitBullet.dx = -this->dx * cosf(angle) + this->dy * sinf(angle);
     splitBullet.dy = -this->dx * sinf(angle) - this->dy * cosf(angle);
 

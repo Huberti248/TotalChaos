@@ -4,6 +4,18 @@ MathUtils::MathUtils() {}
 
 MathUtils::~MathUtils() {}
 
+SDL_FPoint MathUtils::CalculateCollision(float v1, float v2, float t1, float t2, float tContact) {
+    float x = v2 * cosf(t2 - tContact) * cosf(tContact) + v1 * sinf(t1 - tContact) * cosf(tContact + M_PI / 2.0f);
+    float y = v2 * cosf(t2 - tContact) * sinf(tContact) + v1 * sinf(t1 - tContact) * sinf(tContact + M_PI / 2.0f);
+
+	SDL_FPoint res = {
+        x,
+        y
+    };
+
+	return res;
+}
+
 float MathUtils::GetAngle(int x1, int y1, int x2, int y2) {
 	float angle = 90.0f + atan2f(y1 - y2, x1 - x2) * (180.0f / M_PI);
 	return angle >= 0.0f ? angle : 360.0f + angle;

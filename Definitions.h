@@ -76,6 +76,8 @@ using namespace std::chrono_literals;
 #define MINIMUM_INTERVAL_BULLET_MS 2000
 #define MAXIMUM_INTERVAL_BULLET_MS 7000
 
+#define BULLET_COLLISION_DELAY_IN_MS 100
+
 SDL_Window* window;
 SDL_Renderer* renderer;
 int windowWidth = 1280;
