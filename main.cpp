@@ -506,6 +506,7 @@ void mainLoop()
 		enemies[i].dy = 1;
 		enemies[i].r.y += enemies[i].dy * deltaTime * ENEMY_SPEED;
 	}
+
 deleteCollidingBegin:
 	for (int i = 0; i < bullets.size(); ++i) {
 		for (int j = 0; j < enemies.size(); ++j) {
@@ -514,6 +515,18 @@ deleteCollidingBegin:
 				bullets.erase(bullets.begin() + i--);
 				killPoints.setText(renderer, robotoF, std::stoi(killPoints.text) + 1);
 				goto deleteCollidingBegin;
+			}
+		}
+	}
+
+	for (int i = 0; i < bullets.size(); ++i) {
+		for (int j = i + 1; j < bullets.size(); ++j) {
+			if (SDL_HasIntersectionF(&bullets[i].r, &bullets[j].r)) {
+			float dotProduct = MathUtils::GetDotProduct(
+				MathUtils::GetNormalized(bullets[i].dx, bullets[i].dy),
+				MathUtils::GetNormalized(bullets[j].dx, bullets[j].dy));
+
+			float angle = acosf(dotProduct);
 			}
 		}
 	}

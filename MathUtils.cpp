@@ -9,6 +9,10 @@ float MathUtils::GetAngle(int x1, int y1, int x2, int y2) {
 	return angle >= 0.0f ? angle : 360.0f + angle;
 }
 
+float MathUtils::GetDotProduct(SDL_FPoint x, SDL_FPoint y) {
+    return x.x * y.x + x.y * y.y;
+}
+
 float MathUtils::GetMagnitude(float x, float y) {
 	return sqrtf((x * x) + (y * y));
 }
