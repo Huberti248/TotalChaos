@@ -578,7 +578,8 @@ deleteCollidingBegin:
         }
     }
     killPointsText.draw(renderer);
-    healthText.draw(renderer);
+	healthText.setText(renderer, robotoF, player.health, { 255, 0, 0 });
+	healthText.draw(renderer);
 
 	SDL_RenderPresent(renderer);
 }
