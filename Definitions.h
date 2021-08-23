@@ -51,6 +51,8 @@ using namespace std::chrono_literals;
 #include "Movement.h"
 #include "Entity.h"
 #include "Player.h"
+#include "Enemy.h"
+#include "Bullet.h"
 
 // NOTE: Remember to uncomment it on every release
 //#define RELEASE
@@ -65,9 +67,9 @@ using namespace std::chrono_literals;
 //640 x 480 (480i - Smallest PC monitor)
 
 #define PLAYER_SPEED 0.3
-#define BULLET_SPEED 0.1
+#define BULLET_SPEED 0.5
 #define ENEMY_SPEED 0.1
-#define BULLET_SPAWN_DELAY_IN_MS 800
+#define BULLET_SPAWN_DELAY_IN_MS 500
 #define ENEMY_SPAWN_DELAY_IN_MS 1000
 
 SDL_Window* window;

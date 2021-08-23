@@ -403,11 +403,12 @@ SDL_Texture* bgT;
 SDL_Texture* bulletT;
 SDL_Texture* enemyT;
 Clock globalClock;
-std::vector<Entity> bullets;
+std::vector<Bullet> bullets;
 Clock bulletClock;
 Clock enemyClock;
-std::vector<Entity> enemies;
-Text killPoints;
+std::vector<Enemy> enemies;
+Text killPointsText;
+Text healthText;
 
 void mainLoop()
 {
@@ -456,10 +457,10 @@ void mainLoop()
 	else if (keys[SDL_SCANCODE_S]) {
 		player.dy = 1;
 	}
-	if (keys[SDL_SCANCODE_SPACE]) {
+	if (buttons[SDL_BUTTON_LEFT]) {
 		if (bulletClock.getElapsedTime() > BULLET_SPAWN_DELAY_IN_MS) {
 			//TODO: Encapsulate this in a function (and probably a different file)
-			bullets.push_back(Entity());
+			bullets.push_back(Bullet(TargetMask::Enemies));
 			bullets.back().r.w = 32;
 			bullets.back().r.h = 32;
 			bullets.back().r.x = player.r.x + player.r.w / 2 - bullets.back().r.w / 2;
@@ -495,39 +496,68 @@ void mainLoop()
 		}
 	}
 	if (enemyClock.getElapsedTime() > ENEMY_SPAWN_DELAY_IN_MS) {
-		enemies.push_back(Entity());
+		enemies.push_back(Enemy());
 		enemies.back().r.w = 32;
 		enemies.back().r.h = 32;
-		enemies.back().r.x = random(0, windowWidth - enemies.back().r.w);
-		enemies.back().r.y = -enemies.back().r.h;
+		enemies.back().spawnPlace = (SpawnPlace)random(0, 3);
+
+		switch (enemies.back().spawnPlace) {
+			case SpawnPlace::Up:
+				enemies.back().r.x = random(0, windowWidth - enemies.back().r.w);
+				enemies.back().r.y = 0;
+				enemies.back().dy = 1;
+				break;
+			case SpawnPlace::Down:
+				enemies.back().r.x = random(0, windowWidth - enemies.back().r.w);
+				enemies.back().r.y = windowHeight;
+				enemies.back().dy = -1;
+				break;
+			case SpawnPlace::Left:
+				enemies.back().r.x = -enemies.back().r.w;
+				enemies.back().r.y = random(0, windowHeight - enemies.back().r.h);
+				enemies.back().dx = 1;
+				break;
+			case SpawnPlace::Right:
+				enemies.back().r.x = windowWidth;
+				enemies.back().r.y = random(0, windowHeight - enemies.back().r.h);
+				enemies.back().dx = -1;
+				break;
+		}
 		enemyClock.restart();
 	}
 	for (int i = 0; i < enemies.size(); ++i) {
-		enemies[i].dy = 1;
+		enemies[i].r.x += enemies[i].dx * deltaTime * ENEMY_SPEED;
 		enemies[i].r.y += enemies[i].dy * deltaTime * ENEMY_SPEED;
 	}
 
 deleteCollidingBegin:
 	for (int i = 0; i < bullets.size(); ++i) {
+		
+		//Enemy collision
 		for (int j = 0; j < enemies.size(); ++j) {
+			//Layer control
+			if (bullets[i].GetTargetMask() < TargetMask::Enemies) continue;
 			if (SDL_HasIntersectionF(&bullets[i].r, &enemies[j].r)) {
 				enemies.erase(enemies.begin() + j--);
 				bullets.erase(bullets.begin() + i--);
-				killPoints.setText(renderer, robotoF, std::stoi(killPoints.text) + 1);
+				killPointsText.setText(renderer, robotoF, std::stoi(killPointsText.text) + 1);
 				goto deleteCollidingBegin;
 			}
 		}
 	}
-
-	for (int i = 0; i < bullets.size(); ++i) {
-		for (int j = i + 1; j < bullets.size(); ++j) {
-			if (SDL_HasIntersectionF(&bullets[i].r, &bullets[j].r)) {
-			float dotProduct = MathUtils::GetDotProduct(
-				MathUtils::GetNormalized(bullets[i].dx, bullets[i].dy),
-				MathUtils::GetNormalized(bullets[j].dx, bullets[j].dy));
-
-			float angle = acosf(dotProduct);
-			}
+	for (int i = 0; i < enemies.size(); ++i) {
+		SDL_FRect windowR;
+		windowR.w = windowWidth;
+		windowR.h = windowHeight;
+		windowR.x = 0;
+		windowR.y = 0;
+		SDL_FRect enemyR = enemies[i].r;
+		--enemyR.x;
+		--enemyR.y;
+		enemyR.w += 2;
+		enemyR.h += 2;
+		if (!SDL_HasIntersectionF(&enemies[i].r, &windowR)) {
+			enemies.erase(enemies.begin() + i--);
 		}
 	}
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
@@ -539,10 +569,14 @@ deleteCollidingBegin:
 		SDL_RenderCopyF(renderer, bulletT, 0, &bullets[i].r);
 	}
 	for (int i = 0; i < enemies.size(); ++i) {
-		SDL_RenderCopyF(renderer, enemyT, 0, &enemies[i].r);
+		//Based on the enemies' spawn position, rotate them to the proper angle
+		double angles[] = { 180.0, 0.0, 90.0, 270.0 }; // Array of rotations mapped to the enum of spawn positions
+		int index = (int)enemies[i].spawnPlace;
+		SDL_RenderCopyExF(renderer, enemyT, 0, &enemies[i].r, angles[index], 0, SDL_FLIP_NONE);
 	}
-	killPoints.draw(renderer);
-
+	killPointsText.draw(renderer);
+	healthText.setText(renderer, robotoF, player.health, { 255, 0, 0 });
+	healthText.draw(renderer);
 
 	SDL_RenderPresent(renderer);
 }
@@ -570,11 +604,16 @@ int main(int argc, char* argv[])
 	player.r.h = 32;
 	player.r.x = windowWidth / 2 - player.r.w / 2;
 	player.r.y = windowHeight - player.r.h;
-	killPoints.dstR.w=30;
-	killPoints.dstR.h=20;
-	killPoints.dstR.x=windowWidth/2-killPoints.dstR.w/2;
-	killPoints.dstR.y=0;
-	killPoints.setText(renderer, robotoF, "0");
+	killPointsText.dstR.w = 30;
+	killPointsText.dstR.h = 20;
+	killPointsText.dstR.x = windowWidth / 2 - killPointsText.dstR.w / 2;
+	killPointsText.dstR.y = 0;
+	killPointsText.setText(renderer, robotoF, "0");
+	healthText.dstR.w = 30;
+	healthText.dstR.h = 20;
+	healthText.dstR.x = windowWidth - healthText.dstR.w;
+	healthText.dstR.y = 0;
+	healthText.setText(renderer, robotoF, player.health, { 255, 0, 0 });
 	globalClock.restart();
 	bulletClock.restart();
 	enemyClock.restart();
