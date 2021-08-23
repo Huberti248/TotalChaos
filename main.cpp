@@ -530,6 +530,7 @@ deleteCollidingBegin:
         SDL_RenderCopyF(renderer, enemyT, 0, &enemies[i].r);
     }
     killPointsText.draw(renderer);
+    healthText.draw(renderer);
 
     SDL_RenderPresent(renderer);
 }
