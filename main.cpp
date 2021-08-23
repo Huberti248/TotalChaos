@@ -460,7 +460,7 @@ void mainLoop()
 	if (buttons[SDL_BUTTON_LEFT]) {
 		if (bulletClock.getElapsedTime() > BULLET_SPAWN_DELAY_IN_MS) {
 			//TODO: Encapsulate this in a function (and probably a different file)
-			bullets.push_back(Bullet());
+			bullets.push_back(Bullet(TargetMask::Enemies));
 			bullets.back().r.w = 32;
 			bullets.back().r.h = 32;
 			bullets.back().r.x = player.r.x + player.r.w / 2 - bullets.back().r.w / 2;
@@ -531,7 +531,13 @@ void mainLoop()
 	}
 deleteCollidingBegin:
 	for (int i = 0; i < bullets.size(); ++i) {
+
+
+		//Enemy collision
 		for (int j = 0; j < enemies.size(); ++j) {
+			//Layer control
+			if (bullets[i].GetTargetMask() < TargetMask::Enemies) continue;
+			
 			if (SDL_HasIntersectionF(&bullets[i].r, &enemies[j].r)) {
 				enemies.erase(enemies.begin() + j--);
 				bullets.erase(bullets.begin() + i--);
