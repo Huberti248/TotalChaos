@@ -592,6 +592,7 @@ deleteCollidingBegin:
 
                     float tContact = MathUtils::GetAngle(x2, y2, x1, y1);
 
+
                     SDL_FPoint directionA = MathUtils::CalculateCollision(v1, v2, t1, t2, tContact);
                     MathUtils::Normalize(&directionA);
                     SDL_FPoint directionB = MathUtils::CalculateCollision(v2, v1, t2, t1, tContact);
