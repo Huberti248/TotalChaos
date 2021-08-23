@@ -531,13 +531,11 @@ void mainLoop()
 	}
 deleteCollidingBegin:
 	for (int i = 0; i < bullets.size(); ++i) {
-
-
+		
 		//Enemy collision
 		for (int j = 0; j < enemies.size(); ++j) {
 			//Layer control
 			if (bullets[i].GetTargetMask() < TargetMask::Enemies) continue;
-			
 			if (SDL_HasIntersectionF(&bullets[i].r, &enemies[j].r)) {
 				enemies.erase(enemies.begin() + j--);
 				bullets.erase(bullets.begin() + i--);
@@ -546,11 +544,26 @@ deleteCollidingBegin:
 			}
 		}
 	}
+	for (int i = 0; i < enemies.size(); ++i) {
+		SDL_FRect windowR;
+		windowR.w = windowWidth;
+		windowR.h = windowHeight;
+		windowR.x = 0;
+		windowR.y = 0;
+		SDL_FRect enemyR = enemies[i].r;
+		--enemyR.x;
+		--enemyR.y;
+		enemyR.w += 2;
+		enemyR.h += 2;
+		if (!SDL_HasIntersectionF(&enemies[i].r, &windowR)) {
+			enemies.erase(enemies.begin() + i--);
+		}
+	}
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 	SDL_RenderClear(renderer);
 	SDL_RenderCopyF(renderer, bgT, 0, 0);
 	PlayerRotation(playerT, player, mousePos, renderer);
-
+	//SDL_RenderCopyF(renderer, playerT, 0, &player.r);
 	for (int i = 0; i < bullets.size(); ++i) {
 		SDL_RenderCopyF(renderer, bulletT, 0, &bullets[i].r);
 	}
@@ -559,10 +572,8 @@ deleteCollidingBegin:
 		double angles[] = { 180.0, 0.0, 90.0, 270.0 }; // Array of rotations mapped to the enum of spawn positions
 		int index = (int)enemies[i].spawnPlace;
 		SDL_RenderCopyExF(renderer, enemyT, 0, &enemies[i].r, angles[index], 0, SDL_FLIP_NONE);
-		
 	}
 	killPointsText.draw(renderer);
-
 	healthText.setText(renderer, robotoF, player.health, { 255, 0, 0 });
 	healthText.draw(renderer);
 
