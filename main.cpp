@@ -414,6 +414,13 @@ void mainLoop()
 {
 	float deltaTime = globalClock.restart();
 	SDL_Event event;
+
+	SDL_FRect windowR;
+    windowR.w = windowWidth;
+    windowR.h = windowHeight;
+    windowR.x = 0;
+    windowR.y = 0;
+
 	while (SDL_PollEvent(&event)) {
 		if (event.type == SDL_QUIT || event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
 			running = false;
@@ -553,13 +560,21 @@ deleteCollidingBegin:
 				goto deleteCollidingBegin;
 			}
 		}
+
+		if ((bullets[i].lifetime + deltaTime) > BULLET_SPLIT_DELAY_IN_MS) {
+			bullets[i].Split(&bullets);
+            bullets[i].lifetime = 0;
+		}
+        else {
+			bullets[i].lifetime += deltaTime;
+        }
+
+		if (!SDL_HasIntersectionF(&bullets[i].r, &windowR)) {
+            bullets.erase(bullets.begin() + i--);
+		}
 	}
+
 	for (int i = 0; i < enemies.size(); ++i) {
-		SDL_FRect windowR;
-		windowR.w = windowWidth;
-		windowR.h = windowHeight;
-		windowR.x = 0;
-		windowR.y = 0;
 		SDL_FRect enemyR = enemies[i].r;
 		--enemyR.x;
 		--enemyR.y;
@@ -567,6 +582,7 @@ deleteCollidingBegin:
 		enemyR.h += 2;
 		if (!SDL_HasIntersectionF(&enemies[i].r, &windowR)) {
 			enemies.erase(enemies.begin() + i--);
+
 		}
 	}
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);

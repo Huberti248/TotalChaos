@@ -71,6 +71,7 @@ using namespace std::chrono_literals;
 #define ENEMY_SPEED 0.1
 #define BULLET_SPAWN_DELAY_IN_MS 500
 #define ENEMY_SPAWN_DELAY_IN_MS 1000
+#define BULLET_SPLIT_DELAY_IN_MS 1000
 
 SDL_Window* window;
 SDL_Renderer* renderer;

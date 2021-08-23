@@ -14,6 +14,9 @@ public:
 	void Split(std::vector<Bullet>* bulletListRef);
 
 	TargetMask GetTargetMask();
+
+	float lifetime;
+
 private:
 	TargetMask targetMask;
 };
