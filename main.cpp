@@ -743,7 +743,7 @@ int main(int argc, char* argv[])
     killPointsText.dstR.h = 20;
     killPointsText.dstR.x = windowWidth / 2 - killPointsText.dstR.w / 2;
     killPointsText.dstR.y = 0;
-    killPointsText.setText(renderer, robotoF, "100");
+    killPointsText.setText(renderer, robotoF, "0");
     healthText.dstR.w = 30;
     healthText.dstR.h = 20;
     healthText.dstR.x = windowWidth - healthText.dstR.w;
