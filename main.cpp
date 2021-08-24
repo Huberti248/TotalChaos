@@ -216,7 +216,12 @@ void mainLoop()
 					enemies.erase(enemies.begin() + j--);
 					bullets.erase(bullets.begin() + i--);
 					killPointsText.setText(renderer, robotoF, std::stoi(killPointsText.text) + 1);
-					moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 1);
+					if (std::stoi(killPointsText.text) < 100) {
+						moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 1);
+					}
+					else {
+						moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 51);
+					}
 					goto deleteCollidingBegin;
 				}
 			}
