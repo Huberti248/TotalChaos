@@ -108,6 +108,7 @@
     <ClInclude Include="Clock.h" />
     <ClInclude Include="Definitions.h" />
     <ClInclude Include="Enemy.h" />
+    <ClInclude Include="SdlDefinitions.h" />
     <ClInclude Include="SpawnPlace.h" />
     <ClInclude Include="Entity.h" />
     <ClInclude Include="MathUtils.h" />

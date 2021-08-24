@@ -3,7 +3,7 @@
 
 struct Clock {
 	Uint64 start = SDL_GetPerformanceCounter();
-
+	
 	float getElapsedTime()
 	{
 		Uint64 stop = SDL_GetPerformanceCounter();
