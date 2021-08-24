@@ -400,7 +400,7 @@ void UiInit() {
 	healthText.dstR.y = 0;
 	healthText.setText(renderer, robotoF, player.health, { 255, 0, 0 });
 
-	shieldPriceText.setText(renderer, robotoF, "1");
+	shieldPriceText.setText(renderer, robotoF, "30");
 	shieldPriceText.dstR.w = 100;
 	shieldPriceText.dstR.h = 40;
 	shieldPriceText.dstR.x = windowWidth / 2 - shieldPriceText.dstR.w / 2;
