@@ -38,6 +38,10 @@ void WindowInit();
 
 void TexturesInit();
 
+void UiInit();
+
+void ClocksInit();
+
 void BounceOff(Entity* a, Entity* b, bool affectB);
 
 void mainLoop()
@@ -344,63 +348,15 @@ int main(int argc, char* argv[])
 {
 	WindowInit();
 	TexturesInit();
+
 	player.r.w = 32;
 	player.r.h = 32;
 	player.r.x = windowWidth / 2 - player.r.w / 2;
 	player.r.y = windowHeight / 2 - player.r.h / 2;
-	killPointsText.dstR.w = 30;
-	killPointsText.dstR.h = 20;
-	killPointsText.dstR.x = windowWidth / 2 - killPointsText.dstR.w / 2;
-	killPointsText.dstR.y = 0;
-	killPointsText.setText(renderer, robotoF, "0");
-	healthText.dstR.w = 30;
-	healthText.dstR.h = 20;
-	healthText.dstR.x = windowWidth - healthText.dstR.w;
-	healthText.dstR.y = 0;
-	healthText.setText(renderer, robotoF, player.health, { 255, 0, 0 });
-	buyR.w = 200;
-	buyR.h = 200;
-	buyR.x = windowWidth / 2 - buyR.w / 2;
-	buyR.y = windowHeight / 2 - buyR.h / 2;
-	shieldPriceText.setText(renderer, robotoF, "1");
-	shieldPriceText.dstR.w = 100;
-	shieldPriceText.dstR.h = 40;
-	shieldPriceText.dstR.x = windowWidth / 2 - shieldPriceText.dstR.w / 2;
-	shieldPriceText.dstR.y = buyR.y + 10;
-	buyShieldR.w = 32;
-	buyShieldR.h = 32;
-	buyShieldR.x = shieldPriceText.dstR.x + shieldPriceText.dstR.w / 2 - buyShieldR.w / 2;
-	buyShieldR.y = shieldPriceText.dstR.y + shieldPriceText.dstR.h;
-	shieldText.setText(renderer, robotoF, "Shield");
-	shieldText.dstR.w = 100;
-	shieldText.dstR.h = 40;
-	shieldText.dstR.x = buyShieldR.x + buyShieldR.w / 2 - shieldText.dstR.w / 2;
-	shieldText.dstR.y = buyShieldR.y + buyShieldR.h;
-	buyBtnR.w = 100;
-	buyBtnR.h = 60;
-	buyBtnR.x = shieldText.dstR.x + shieldText.dstR.w / 2 - buyBtnR.w / 2;
-	buyBtnR.y = shieldText.dstR.y + shieldText.dstR.h;
-	closeBtnR.w = 32;
-	closeBtnR.h = 32;
-	closeBtnR.x = buyR.x + buyR.w - closeBtnR.w / 2;
-	closeBtnR.y = buyR.y - closeBtnR.h / 2;
-	moneyR.w = 32;
-	moneyR.h = 32;
-	moneyR.x = windowWidth - moneyR.w;
-	moneyR.y = healthText.dstR.y + healthText.dstR.h;
-	moneyText.setText(renderer, robotoF, 0);
-	moneyText.dstR.w = 30;
-	moneyText.dstR.h = 20;
-	moneyText.dstR.x = moneyR.x - moneyText.dstR.w;
-	moneyText.dstR.y = healthText.dstR.y + healthText.dstR.h;
-	shieldPrizeCoinsR.w = 32;
-	shieldPrizeCoinsR.h = 32;
-	shieldPrizeCoinsR.x = shieldPriceText.dstR.x + shieldPriceText.dstR.w;
-	shieldPrizeCoinsR.y = shieldPriceText.dstR.y;
-	globalClock.restart();
-	bulletClock.restart();
-	enemyClock.restart();
-	planetClock.restart();
+	
+	UiInit();
+	ClocksInit();
+
 #ifdef __EMSCRIPTEN__
 	emscripten_set_main_loop(mainLoop, 0, 1);
 #else
@@ -424,6 +380,75 @@ void TexturesInit() {
 	shieldT = IMG_LoadTexture(renderer, "res/shield.png");
 	closeT = IMG_LoadTexture(renderer, "res/close.png");
 	coinsT = IMG_LoadTexture(renderer, "res/coins.png");
+}
+
+void UiInit() {
+	buyR.w = 200;
+	buyR.h = 200;
+	buyR.x = windowWidth / 2 - buyR.w / 2;
+	buyR.y = windowHeight / 2 - buyR.h / 2;
+
+	killPointsText.dstR.w = 30;
+	killPointsText.dstR.h = 20;
+	killPointsText.dstR.x = windowWidth / 2 - killPointsText.dstR.w / 2;
+	killPointsText.dstR.y = 0;
+	killPointsText.setText(renderer, robotoF, "0");
+
+	healthText.dstR.w = 30;
+	healthText.dstR.h = 20;
+	healthText.dstR.x = windowWidth - healthText.dstR.w;
+	healthText.dstR.y = 0;
+	healthText.setText(renderer, robotoF, player.health, { 255, 0, 0 });
+
+	shieldPriceText.setText(renderer, robotoF, "1");
+	shieldPriceText.dstR.w = 100;
+	shieldPriceText.dstR.h = 40;
+	shieldPriceText.dstR.x = windowWidth / 2 - shieldPriceText.dstR.w / 2;
+	shieldPriceText.dstR.y = buyR.y + 10;
+
+	buyShieldR.w = 32;
+	buyShieldR.h = 32;
+	buyShieldR.x = shieldPriceText.dstR.x + shieldPriceText.dstR.w / 2 - buyShieldR.w / 2;
+	buyShieldR.y = shieldPriceText.dstR.y + shieldPriceText.dstR.h;
+
+	shieldText.setText(renderer, robotoF, "Shield");
+	shieldText.dstR.w = 100;
+	shieldText.dstR.h = 40;
+	shieldText.dstR.x = buyShieldR.x + buyShieldR.w / 2 - shieldText.dstR.w / 2;
+	shieldText.dstR.y = buyShieldR.y + buyShieldR.h;
+
+	buyBtnR.w = 100;
+	buyBtnR.h = 60;
+	buyBtnR.x = shieldText.dstR.x + shieldText.dstR.w / 2 - buyBtnR.w / 2;
+	buyBtnR.y = shieldText.dstR.y + shieldText.dstR.h;
+
+	closeBtnR.w = 32;
+	closeBtnR.h = 32;
+	closeBtnR.x = buyR.x + buyR.w - closeBtnR.w / 2;
+	closeBtnR.y = buyR.y - closeBtnR.h / 2;
+
+	moneyR.w = 32;
+	moneyR.h = 32;
+	moneyR.x = windowWidth - moneyR.w;
+	moneyR.y = healthText.dstR.y + healthText.dstR.h;
+
+	moneyText.setText(renderer, robotoF, 0);
+	moneyText.dstR.w = 30;
+	moneyText.dstR.h = 20;
+	moneyText.dstR.x = moneyR.x - moneyText.dstR.w;
+	moneyText.dstR.y = healthText.dstR.y + healthText.dstR.h;
+
+	shieldPrizeCoinsR.w = 32;
+	shieldPrizeCoinsR.h = 32;
+	shieldPrizeCoinsR.x = shieldPriceText.dstR.x + shieldPriceText.dstR.w;
+	shieldPrizeCoinsR.y = shieldPriceText.dstR.y;
+}
+
+void ClocksInit() {
+	globalClock.restart();
+	bulletClock.restart();
+	enemyClock.restart();
+	planetClock.restart();
 }
 
 void WindowInit() {
