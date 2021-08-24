@@ -52,13 +52,6 @@ SDL_FPoint MathUtils::GetNormalized(const SDL_Point& point) {
 		(float)point.y / mag
 	};
 
-   
-	#ifdef _DEBUG
-	std::cout << "Vec: " << "(" << point.x << ", " << point.y << ");\n";
-	std::cout << "Mag: " << mag << std::endl;
-	#endif
-	
-
 	return res;
 }
 

@@ -382,6 +382,8 @@ Player player; //Note: Default player health = 5
 SDL_Texture* playerT;
 SDL_Texture* bgT;
 SDL_Texture* bulletT;
+SDL_Texture* redBulletT;
+SDL_Texture* purpleBulletT;
 SDL_Texture* enemyT;
 Clock globalClock;
 std::vector<Bullet> bullets;
@@ -397,10 +399,10 @@ void mainLoop()
 	SDL_Event event;
 
 	SDL_FRect windowR;
-    windowR.w = windowWidth;
-    windowR.h = windowHeight;
-    windowR.x = 0;
-    windowR.y = 0;
+	windowR.w = windowWidth;
+	windowR.h = windowHeight;
+	windowR.x = 0;
+	windowR.y = 0;
 
 	while (SDL_PollEvent(&event)) {
 		if (event.type == SDL_QUIT || event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
@@ -544,53 +546,51 @@ deleteCollidingBegin:
 			}
 		}
 
-		
-
 		if ((bullets[i].lifetime + deltaTime) > BULLET_SPLIT_DELAY_IN_MS) {
 			bullets[i].Split(&bullets);
-            bullets[i].lifetime = 0;
+			bullets[i].lifetime = 0;
 		}
-        else {
+		else {
 			bullets[i].lifetime += deltaTime;
-        }
+		}
 
 		//Bullet collision
-        if (i != (bullets.size() - 1)) {
-            for (int j = i + 1; j < bullets.size(); ++j) {
-                bool timePassed = (bullets[i].lifetime > BULLET_COLLISION_DELAY_IN_MS) && (bullets[j].lifetime > BULLET_COLLISION_DELAY_IN_MS);
-                if (SDL_HasIntersectionF(&bullets[i].r, &bullets[j].r) && timePassed) {
-                    Bullet a = bullets[i];
-                    Bullet b = bullets[j];
+		if (i != (bullets.size() - 1)) {
+			for (int j = i + 1; j < bullets.size(); ++j) {
+				bool timePassed = (bullets[i].lifetime > BULLET_COLLISION_DELAY_IN_MS) && (bullets[j].lifetime > BULLET_COLLISION_DELAY_IN_MS);
+				if (SDL_HasIntersectionF(&bullets[i].r, &bullets[j].r) && timePassed) {
+					Bullet a = bullets[i];
+					Bullet b = bullets[j];
 
-                    float v1 = MathUtils::GetMagnitude(a.dx, a.dy);
-                    float v2 = MathUtils::GetMagnitude(b.dx, b.dy);
+					float v1 = MathUtils::GetMagnitude(a.dx, a.dy);
+					float v2 = MathUtils::GetMagnitude(b.dx, b.dy);
 
 					float x1 = a.r.x + a.r.w / 2.0f;
-                    float y1 = a.r.y + a.r.h / 2.0f;
-                    float x2 = b.r.x + b.r.w / 2.0f;
-                    float y2 = b.r.y + b.r.h / 2.0f;
+					float y1 = a.r.y + a.r.h / 2.0f;
+					float x2 = b.r.x + b.r.w / 2.0f;
+					float y2 = b.r.y + b.r.h / 2.0f;
 
-                    float t1 = MathUtils::GetAngle(a.dx, a.dy, x1, y1);
-                    float t2 = MathUtils::GetAngle(b.dx, b.dy, x2, y2);
+					float t1 = MathUtils::GetAngle(a.dx, a.dy, x1, y1);
+					float t2 = MathUtils::GetAngle(b.dx, b.dy, x2, y2);
 
-                    float tContact = MathUtils::GetAngle(x2, y2, x1, y1);
+					float tContact = MathUtils::GetAngle(x2, y2, x1, y1);
 
 
-                    SDL_FPoint directionA = MathUtils::CalculateCollision(v1, v2, t1, t2, tContact);
-                    MathUtils::Normalize(&directionA);
-                    SDL_FPoint directionB = MathUtils::CalculateCollision(v2, v1, t2, t1, tContact);
-                    MathUtils::Normalize(&directionB);
+					SDL_FPoint directionA = MathUtils::CalculateCollision(v1, v2, t1, t2, tContact);
+					MathUtils::Normalize(&directionA);
+					SDL_FPoint directionB = MathUtils::CalculateCollision(v2, v1, t2, t1, tContact);
+					MathUtils::Normalize(&directionB);
 
-                    bullets[i].dx = directionA.x;
-                    bullets[i].dy = directionA.y;
-                    bullets[j].dx = directionB.x;
-                    bullets[j].dy = directionB.y;
-                }
-            }
-        }
+					bullets[i].dx = directionA.x;
+					bullets[i].dy = directionA.y;
+					bullets[j].dx = directionB.x;
+					bullets[j].dy = directionB.y;
+				}
+			}
+		}
 
 		if (!SDL_HasIntersectionF(&bullets[i].r, &windowR)) {
-            bullets.erase(bullets.begin() + i--);
+			bullets.erase(bullets.begin() + i--);
 		}
 	}        
 
@@ -617,7 +617,17 @@ deleteCollidingBegin:
 	RotateEntityTowards(playerT, player, mousePos, renderer);
 	//SDL_RenderCopyF(renderer, playerT, 0, &player.r);
 	for (int i = 0; i < bullets.size(); ++i) {
-		SDL_RenderCopyF(renderer, bulletT, 0, &bullets[i].r);
+		switch (bullets[i].GetTargetMask()) {
+			case TargetMask::PlayerMask:
+				SDL_RenderCopyF(renderer, redBulletT, 0, &bullets[i].r);
+				break;
+			case TargetMask::EnemiesMask | TargetMask::PlayerMask:
+				SDL_RenderCopyF(renderer, purpleBulletT, 0, &bullets[i].r);
+				break;
+			default:
+				SDL_RenderCopyF(renderer, bulletT, 0, &bullets[i].r);
+				break;
+		}
 	}
 	for (int i = 0; i < enemies.size(); ++i) {
 		//Based on the enemies' spawn position, rotate them to the proper angle
@@ -649,6 +659,8 @@ int main(int argc, char* argv[])
 	playerT = IMG_LoadTexture(renderer, "res/player.png");
 	bgT = IMG_LoadTexture(renderer, "res/bg.png");
 	bulletT = IMG_LoadTexture(renderer, "res/bullet.png");
+	redBulletT = IMG_LoadTexture(renderer, "res/bulletRed.png");
+	purpleBulletT = IMG_LoadTexture(renderer, "res/bulletPurple.png");
 	enemyT = IMG_LoadTexture(renderer, "res/enemy.png");
 	player.r.w = 32;
 	player.r.h = 32;
