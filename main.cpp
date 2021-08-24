@@ -24,6 +24,7 @@ Clock planetClock;
 bool buying = false;
 Text shieldPriceText;
 Text shieldText;
+Text shieldHealthText;
 SDL_FRect buyBtnR;
 SDL_FRect buyR;
 SDL_FRect buyShieldR;
@@ -80,6 +81,8 @@ void mainLoop()
 					shieldHealth = 10;
 #if _DEBUG
 					printf("Shield health: %d\n", shieldHealth);
+					std::string sText = "Shield: " + std::to_string(shieldHealth);
+					shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
 #endif
 					moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shieldPriceText.text));
 				}
@@ -188,9 +191,6 @@ void mainLoop()
 			if ((bullets[i].GetTargetMask() & TargetMask::PlayerMask) != 0) {
 				if (SDL_HasIntersectionF(&bullets[i].r, &player.r)) {
 					if (hasShield) {
-#if _DEBUG
-						printf("Shield health: %d\n", shieldHealth);
-#endif
 						bool willDamage = !bullets[i].bouncedOffShield;
 
 						if (bullets[i].bouncedOffShield && bullets[i].shieldBounceDelay.getElapsedTime() > BULLET_SHIELD_BOUNCE_TOLERANCE) {
@@ -201,9 +201,15 @@ void mainLoop()
 							bullets[i].shieldBounceDelay.restart();
 						}
 
-
-						shieldHealth = willDamage ? shieldHealth - 1 : shieldHealth;
-
+						if (willDamage) {
+							shieldHealth--;
+#if _DEBUG
+							printf("Shield health: %d\n", shieldHealth);
+							std::string sText = "Shield: " + std::to_string(shieldHealth);
+							shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
+#endif
+						}
+						
 						if (shieldHealth <= 0) {
 							hasShield = false;
 						}
@@ -227,12 +233,10 @@ void mainLoop()
 					enemies.erase(enemies.begin() + j--);
 					bullets.erase(bullets.begin() + i--);
 					killPointsText.setText(renderer, robotoF, std::stoi(killPointsText.text) + 1);
-					if (std::stoi(killPointsText.text) < 100) {
-						moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 1);
+					if (std::stoi(killPointsText.text) % 100 == 0) {
+						moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 30);
 					}
-					else {
-						moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 51);
-					}
+					moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 1);
 					goto deleteCollidingBegin;
 				}
 			}
@@ -326,6 +330,7 @@ void mainLoop()
 	}
 	killPointsText.draw(renderer);
 	healthText.draw(renderer);
+	shieldHealthText.draw(renderer);
 	for (int i = 0; i < planets.size(); ++i) {
 		SDL_RenderCopyF(renderer, planetT, 0, &planets[i].r);
 	}
@@ -399,6 +404,13 @@ void UiInit() {
 	healthText.dstR.x = windowWidth - healthText.dstR.w;
 	healthText.dstR.y = 0;
 	healthText.setText(renderer, robotoF, player.health, { 255, 0, 0 });
+
+	shieldHealthText.dstR.w = 30;
+	shieldHealthText.dstR.h = 20;
+	shieldHealthText.dstR.x = windowWidth / 2 - shieldPriceText.dstR.w / 2;
+	shieldHealthText.dstR.y = 0;
+	std::string sText = "Shield: " + std::to_string(shieldHealth);
+	shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
 
 	shieldPriceText.setText(renderer, robotoF, "30");
 	shieldPriceText.dstR.w = 100;
