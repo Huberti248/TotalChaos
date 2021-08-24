@@ -410,6 +410,7 @@ int shieldHealth = 10;
 SDL_FRect closeBtnR;
 SDL_FRect moneyR;
 Text moneyText;
+SDL_FRect shieldPrizeCoinsR;
 
 void mainLoop()
 {
@@ -717,6 +718,7 @@ void mainLoop()
         SDL_RenderCopyF(renderer, buyT, 0, &buyBtnR);
         SDL_RenderCopyF(renderer, shieldT, 0, &buyShieldR);
         SDL_RenderCopyF(renderer, closeT, 0, &closeBtnR);
+    SDL_RenderCopyF(renderer, coinsT, 0, &shieldPrizeCoinsR);
     }
     SDL_RenderPresent(renderer);
 }
@@ -796,6 +798,10 @@ int main(int argc, char* argv[])
     moneyText.dstR.h = 20;
     moneyText.dstR.x = moneyR.x - moneyText.dstR.w;
     moneyText.dstR.y = healthText.dstR.y + healthText.dstR.h;
+    shieldPrizeCoinsR.w = 32;
+    shieldPrizeCoinsR.h = 32;
+    shieldPrizeCoinsR.x = shieldPriceText.dstR.x + shieldPriceText.dstR.w;
+    shieldPrizeCoinsR.y = shieldPriceText.dstR.y;
     globalClock.restart();
     bulletClock.restart();
     enemyClock.restart();
