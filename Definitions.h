@@ -70,13 +70,15 @@ using namespace std::chrono_literals;
 #define PLAYER_SPEED 0.3
 #define BULLET_SPEED 0.5
 #define ENEMY_SPEED 0.1
+#define PLANET_SPEED 0.1
 #define BULLET_SPAWN_DELAY_IN_MS 500
 #define ENEMY_SPAWN_DELAY_IN_MS 1000
 #define BULLET_SPLIT_DELAY_IN_MS 1050
 #define MINIMUM_INTERVAL_BULLET_MS 2000
 #define MAXIMUM_INTERVAL_BULLET_MS 7000
-
 #define BULLET_COLLISION_DELAY_IN_MS 100
+#define PLANET_SPAWN_DELAY_IN_MS 10000
+
 
 SDL_Window* window;
 SDL_Renderer* renderer;
