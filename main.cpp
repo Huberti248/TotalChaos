@@ -389,6 +389,7 @@ SDL_Texture* planetT;
 SDL_Texture* buyT;
 SDL_Texture* shieldT;
 SDL_Texture* closeT;
+SDL_Texture* coinsT;
 Clock globalClock;
 std::vector<Bullet> bullets;
 Clock bulletClock;
@@ -407,6 +408,8 @@ SDL_FRect buyShieldR;
 bool hasShield = false;
 int shieldHealth = 10;
 SDL_FRect closeBtnR;
+SDL_FRect moneyR;
+Text moneyText;
 
 void mainLoop()
 {
@@ -439,10 +442,10 @@ void mainLoop()
                 buying = false;
             }
             if (SDL_PointInFRect(&mousePos, &buyBtnR) && buying && !hasShield) {
-                if (std::stoi(killPointsText.text) >= std::stoi(shieldPriceText.text)) {
+                if (std::stoi(moneyText.text) >= std::stoi(shieldPriceText.text)) {
                     hasShield = true;
                     shieldHealth = 10;
-                    killPointsText.setText(renderer, robotoF, std::stoi(killPointsText.text) - std::stoi(shieldPriceText.text));
+                    moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shieldPriceText.text));
                 }
             }
         }
@@ -578,6 +581,7 @@ void mainLoop()
                     enemies.erase(enemies.begin() + j--);
                     bullets.erase(bullets.begin() + i--);
                     killPointsText.setText(renderer, robotoF, std::stoi(killPointsText.text) + 1);
+                    moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 1);
                     goto deleteCollidingBegin;
                 }
             }
@@ -698,6 +702,8 @@ void mainLoop()
     for (int i = 0; i < planets.size(); ++i) {
         SDL_RenderCopyF(renderer, planetT, 0, &planets[i].r);
     }
+    SDL_RenderCopyF(renderer, coinsT, 0, &moneyR);
+    moneyText.draw(renderer);
     if (buying) {
         SDL_SetRenderDrawColor(renderer, 125, 125, 125, 0);
         SDL_RenderFillRectF(renderer, &buyR);
@@ -735,6 +741,7 @@ int main(int argc, char* argv[])
     buyT = IMG_LoadTexture(renderer, "res/buy.png");
     shieldT = IMG_LoadTexture(renderer, "res/shield.png");
     closeT = IMG_LoadTexture(renderer, "res/close.png");
+    coinsT = IMG_LoadTexture(renderer, "res/coins.png");
     player.r.w = 32;
     player.r.h = 32;
     player.r.x = windowWidth / 2 - player.r.w / 2;
@@ -775,6 +782,15 @@ int main(int argc, char* argv[])
     closeBtnR.h = 32;
     closeBtnR.x = buyR.x + buyR.w - closeBtnR.w / 2;
     closeBtnR.y = buyR.y - closeBtnR.h / 2;
+    moneyR.w = 32;
+    moneyR.h = 32;
+    moneyR.x = windowWidth-moneyR.w;
+    moneyR.y = healthText.dstR.y + healthText.dstR.h;
+    moneyText.setText(renderer, robotoF, 0);
+    moneyText.dstR.w = 30;
+    moneyText.dstR.h = 20;
+    moneyText.dstR.x = moneyR.x-moneyText.dstR.w;
+    moneyText.dstR.y = healthText.dstR.y + healthText.dstR.h;
     globalClock.restart();
     bulletClock.restart();
     enemyClock.restart();
