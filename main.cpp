@@ -753,7 +753,7 @@ int main(int argc, char* argv[])
     buyR.h = 200;
     buyR.x = windowWidth / 2 - buyR.w / 2;
     buyR.y = windowHeight / 2 - buyR.h / 2;
-    shieldPriceText.setText(renderer, robotoF, "0");
+    shieldPriceText.setText(renderer, robotoF, "100");
     shieldPriceText.dstR.w = 100;
     shieldPriceText.dstR.h = 40;
     shieldPriceText.dstR.x = windowWidth / 2 - shieldPriceText.dstR.w / 2;
