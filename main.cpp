@@ -28,6 +28,7 @@ SDL_FRect buyBtnR;
 SDL_FRect buyR;
 SDL_FRect buyShieldR;
 SDL_FRect moneyR;
+SDL_FRect shieldPrizeCoinsR;
 Text moneyText;
 bool hasShield = false;
 int shieldHealth = 10;
@@ -69,10 +70,13 @@ void mainLoop()
 			if (SDL_PointInFRect(&mousePos, &closeBtnR) && buying) {
 				buying = false;
 			}
-			if (SDL_PointInFRect(&mousePos, &buyBtnR) && buying && !hasShield) {
+			if (SDL_PointInFRect(&mousePos, &buyBtnR) && buying) {
 				if (std::stoi(moneyText.text) >= std::stoi(shieldPriceText.text)) {
 					hasShield = true;
 					shieldHealth = 10;
+#if _DEBUG
+					printf("Shield health: %d\n", shieldHealth);
+#endif
 					moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shieldPriceText.text));
 				}
 			}
@@ -180,6 +184,9 @@ void mainLoop()
 			if ((bullets[i].GetTargetMask() & TargetMask::PlayerMask) != 0) {
 				if (SDL_HasIntersectionF(&bullets[i].r, &player.r)) {
 					if (hasShield) {
+#if _DEBUG
+						printf("Shield health: %d\n", shieldHealth);
+#endif
 						bool willDamage = !bullets[i].bouncedOffShield;
 
 						if (bullets[i].bouncedOffShield && bullets[i].shieldBounceDelay.getElapsedTime() > BULLET_SHIELD_BOUNCE_TOLERANCE) {
@@ -328,6 +335,7 @@ void mainLoop()
 		SDL_RenderCopyF(renderer, buyT, 0, &buyBtnR);
 		SDL_RenderCopyF(renderer, shieldT, 0, &buyShieldR);
 		SDL_RenderCopyF(renderer, closeT, 0, &closeBtnR);
+		SDL_RenderCopyF(renderer, coinsT, 0, &shieldPrizeCoinsR);
 	}
 	SDL_RenderPresent(renderer);
 }
@@ -385,6 +393,10 @@ int main(int argc, char* argv[])
 	moneyText.dstR.h = 20;
 	moneyText.dstR.x = moneyR.x - moneyText.dstR.w;
 	moneyText.dstR.y = healthText.dstR.y + healthText.dstR.h;
+	shieldPrizeCoinsR.w = 32;
+	shieldPrizeCoinsR.h = 32;
+	shieldPrizeCoinsR.x = shieldPriceText.dstR.x + shieldPriceText.dstR.w;
+	shieldPrizeCoinsR.y = shieldPriceText.dstR.y;
 	globalClock.restart();
 	bulletClock.restart();
 	enemyClock.restart();
