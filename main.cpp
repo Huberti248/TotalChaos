@@ -581,7 +581,12 @@ void mainLoop()
                     enemies.erase(enemies.begin() + j--);
                     bullets.erase(bullets.begin() + i--);
                     killPointsText.setText(renderer, robotoF, std::stoi(killPointsText.text) + 1);
-                    moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 1);
+                    if (std::stoi(killPointsText.text) < 100) {
+                        moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 1);
+                    }
+                    else {
+                        moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 51);
+                    }
                     goto deleteCollidingBegin;
                 }
             }
@@ -784,12 +789,12 @@ int main(int argc, char* argv[])
     closeBtnR.y = buyR.y - closeBtnR.h / 2;
     moneyR.w = 32;
     moneyR.h = 32;
-    moneyR.x = windowWidth-moneyR.w;
+    moneyR.x = windowWidth - moneyR.w;
     moneyR.y = healthText.dstR.y + healthText.dstR.h;
     moneyText.setText(renderer, robotoF, 0);
     moneyText.dstR.w = 30;
     moneyText.dstR.h = 20;
-    moneyText.dstR.x = moneyR.x-moneyText.dstR.w;
+    moneyText.dstR.x = moneyR.x - moneyText.dstR.w;
     moneyText.dstR.y = healthText.dstR.y + healthText.dstR.h;
     globalClock.restart();
     bulletClock.restart();
