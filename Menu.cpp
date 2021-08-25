@@ -13,8 +13,3 @@ void CalculateButtonPosition(
 	dstButton->y = height / 2.0f - numButtons * (dstButton->h / 2.0f + paddingVertical) + (index + 0.5f) * (dstButton->h + paddingVertical);
 
 }
-
-
-
-
-

@@ -3,6 +3,7 @@
 
 #define MAIN_MENU_COLOR {0, 0, 100}
 #define MAIN_MENU_BUTTON_PADDING 25
+
 enum class MenuName {
 	Play = 1,
 	Quit

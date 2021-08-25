@@ -16,6 +16,8 @@ public:
 
 	float lifetime;
 	bool bouncedOffShield;
+	bool ghostBullet;
+
 
 	Bullet(int targetMask);
 

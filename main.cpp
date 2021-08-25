@@ -420,7 +420,7 @@ void UiInit() {
 	std::string sText = "Shield: " + std::to_string(shieldHealth);
 	shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
 
-	shieldPriceText.setText(renderer, robotoF, "30");
+	shieldPriceText.setText(renderer, robotoF, "50");
 	shieldPriceText.dstR.w = 100;
 	shieldPriceText.dstR.h = 40;
 	shieldPriceText.dstR.x = windowWidth / 2 - shieldPriceText.dstR.w / 2;
