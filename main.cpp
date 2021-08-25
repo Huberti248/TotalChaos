@@ -527,9 +527,7 @@ MenuName displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Poi
 		buttons[i].selected = false;
 		buttons[i].buttonText.dstR.w = 100;
 		buttons[i].buttonText.dstR.h = 40;
-		SDL_FPoint pos = CalculateButtonPosition(buttons[i].buttonText.dstR, i, NUMMENU, windowWidth, windowHeight);
-		buttons[i].buttonText.dstR.x = pos.x;
-		buttons[i].buttonText.dstR.y = pos.y;
+		CalculateButtonPosition(&buttons[i].buttonText.dstR, i, NUMMENU, windowWidth, windowHeight);
 		buttons[i].buttonText.setText(rendererMenu, fontMenu, buttons[i].label, color[0]);
 	}
 

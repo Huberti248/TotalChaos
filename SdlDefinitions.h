@@ -180,11 +180,6 @@ struct Text {
     }
 };
 
-enum MenuName {
-	Play = 1,
-	Quit
-};
-
 struct MenuButton {
 	MenuName menuType;
 	Text buttonText;
