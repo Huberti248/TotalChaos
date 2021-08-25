@@ -49,6 +49,7 @@ using namespace std::chrono_literals;
 
 #include "MathUtils.h"
 #include "Movement.h"
+#include "Menu.h"
 #include "Entity.h"
 #include "Player.h"
 #include "Enemy.h"

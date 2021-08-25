@@ -99,6 +99,7 @@
     <ClCompile Include="Entity.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MathUtils.cpp" />
+    <ClCompile Include="Menu.cpp" />
     <ClCompile Include="Movement.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="vendor\PUGIXML\src\pugixml.cpp" />
@@ -108,6 +109,7 @@
     <ClInclude Include="Clock.h" />
     <ClInclude Include="Definitions.h" />
     <ClInclude Include="Enemy.h" />
+    <ClInclude Include="Menu.h" />
     <ClInclude Include="SdlDefinitions.h" />
     <ClInclude Include="SpawnPlace.h" />
     <ClInclude Include="Entity.h" />

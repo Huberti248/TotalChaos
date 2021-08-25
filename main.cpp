@@ -45,6 +45,8 @@ void ClocksInit();
 
 void BounceOff(Entity* a, Entity* b, bool affectB);
 
+MenuName displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Point* mousePosMenu);
+
 void mainLoop()
 {
 	float deltaTime = globalClock.restart();
@@ -361,7 +363,11 @@ int main(int argc, char* argv[])
 	
 	UiInit();
 	ClocksInit();
-
+	
+	MenuName buttonType = displayMainMenu(renderer, robotoF, &realMousePos);
+	if (buttonType == MenuName::Quit) {
+		running = false;
+	}
 #ifdef __EMSCRIPTEN__
 	emscripten_set_main_loop(mainLoop, 0, 1);
 #else
@@ -503,4 +509,75 @@ void BounceOff(Entity* a, Entity* b, bool affectB) {
 	if (!affectB) return;
 	b->dx = directionB.x;
 	b->dy = directionB.y;
+}
+
+MenuName displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Point* mousePosMenu) {
+	const int NUMMENU = 2;
+	MenuButton buttons[NUMMENU];
+	const std::string labels[NUMMENU] = { "Play", "Exit" };
+	const MenuName menuTypes[NUMMENU] = { MenuName::Play, MenuName::Quit };
+	SDL_Color color[2] = { { 255, 255, 255 }, { 255, 0, 0 } };
+
+	SDL_SetRenderDrawColor(rendererMenu, 50, 50, 50, 1);
+
+	for (int i = 0; i < NUMMENU; ++i)
+	{
+		buttons[i].label = labels[i];
+		buttons[i].menuType = menuTypes[i];
+		buttons[i].selected = false;
+		buttons[i].buttonText.dstR.w = 100;
+		buttons[i].buttonText.dstR.h = 40;
+		SDL_FPoint pos = CalculateButtonPosition(buttons[i].buttonText.dstR, i, NUMMENU, windowWidth, windowHeight);
+		buttons[i].buttonText.dstR.x = pos.x;
+		buttons[i].buttonText.dstR.y = pos.y;
+		buttons[i].buttonText.setText(rendererMenu, fontMenu, buttons[i].label, color[0]);
+	}
+
+	SDL_Event eventMenu;
+	while (true) {
+		SDL_RenderClear(rendererMenu);
+		while (SDL_PollEvent(&eventMenu)) {
+			switch (eventMenu.type) {
+			case SDL_QUIT:
+				return MenuName::Quit;
+			case SDL_MOUSEMOTION:
+				mousePosMenu->x = eventMenu.motion.x;
+				mousePosMenu->y = eventMenu.motion.y;
+				for (int i = 0; i < NUMMENU; ++i) {
+					if (SDL_PointInFRect(mousePosMenu, &buttons[i].buttonText.dstR)) {
+						if (!buttons[i].selected) {
+							buttons[i].selected = true;
+							buttons[i].buttonText.setText(rendererMenu, fontMenu, buttons[i].label, color[1]);
+						}
+					}
+					else {
+						if (buttons[i].selected) {
+							buttons[i].selected = false;
+							buttons[i].buttonText.setText(rendererMenu, fontMenu, buttons[i].label, color[0]);
+						}
+					}
+				}
+				break;
+			case SDL_MOUSEBUTTONDOWN:
+				mousePosMenu->x = eventMenu.motion.x;
+				mousePosMenu->y = eventMenu.motion.y;
+				for (int i = 0; i < NUMMENU; ++i) {
+					if (SDL_PointInFRect(mousePosMenu, &buttons[i].buttonText.dstR)) {
+						return buttons[i].menuType;
+					}
+				}
+				break;
+			case SDL_KEYDOWN:
+				if (eventMenu.key.keysym.sym == SDLK_ESCAPE) {
+					return MenuName::Quit;
+				}
+				break;
+			}
+		}
+		for (MenuButton button : buttons) {
+			button.buttonText.draw(rendererMenu);
+		}
+
+		SDL_RenderPresent(rendererMenu);
+	}
 }

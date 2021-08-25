@@ -180,6 +180,18 @@ struct Text {
     }
 };
 
+enum MenuName {
+	Play = 1,
+	Quit
+};
+
+struct MenuButton {
+	MenuName menuType;
+	Text buttonText;
+    std::string label;
+	bool selected;
+};
+
 int SDL_RenderDrawCircle(SDL_Renderer* renderer, int x, int y, int radius)
 {
     int offsetx, offsety, d;
