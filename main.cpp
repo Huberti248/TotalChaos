@@ -12,6 +12,7 @@ SDL_Texture* buyT;
 SDL_Texture* shieldT;
 SDL_Texture* closeT;
 SDL_Texture* coinsT;
+SDL_Texture* uiSelectedT;
 Clock globalClock;
 std::vector<Bullet> bullets;
 Clock bulletClock;
@@ -391,6 +392,7 @@ void TexturesInit() {
 	shieldT = IMG_LoadTexture(renderer, "res/shield.png");
 	closeT = IMG_LoadTexture(renderer, "res/close.png");
 	coinsT = IMG_LoadTexture(renderer, "res/coins.png");
+	uiSelectedT = IMG_LoadTexture(renderer, "res/player.png");
 }
 
 void UiInit() {
@@ -518,8 +520,17 @@ MenuName displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Poi
 	const MenuName menuTypes[NUMMENU] = { MenuName::Play, MenuName::Quit };
 	SDL_Color color[2] = { { 255, 255, 255 }, { 255, 0, 0 } };
 
-	SDL_SetRenderDrawColor(rendererMenu, 50, 50, 50, 1);
+	// Setup background and title
+	SDL_SetRenderDrawColor(rendererMenu, 0, 0, 0, 1);
 
+	Text titleText;
+	titleText.dstR.w = windowWidth - 100;
+	titleText.dstR.h = 100;
+	titleText.dstR.x = windowWidth / 2.0f - titleText.dstR.w / 2.0f;
+	titleText.dstR.y = titleText.dstR.h / 2.0f;
+	titleText.setText(rendererMenu, fontMenu, "Total Chaos In Space", MAIN_MENU_COLOR);
+
+	// Setup buttons
 	for (int i = 0; i < NUMMENU; ++i)
 	{
 		buttons[i].label = labels[i];
@@ -527,9 +538,15 @@ MenuName displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Poi
 		buttons[i].selected = false;
 		buttons[i].buttonText.dstR.w = 100;
 		buttons[i].buttonText.dstR.h = 40;
-		CalculateButtonPosition(&buttons[i].buttonText.dstR, i, NUMMENU, windowWidth, windowHeight);
+		CalculateButtonPosition(&buttons[i].buttonText.dstR, i, NUMMENU, windowWidth, windowHeight, MAIN_MENU_BUTTON_PADDING);
+		buttons[i].buttonText.dstR.y += titleText.dstR.h;
 		buttons[i].buttonText.setText(rendererMenu, fontMenu, buttons[i].label, color[0]);
 	}
+
+	// Setup pointer by selected button.
+	SDL_FRect uiSelectedR;
+	uiSelectedR.w = 32;
+	uiSelectedR.h = 32;
 
 	SDL_Event eventMenu;
 	while (true) {
@@ -538,6 +555,11 @@ MenuName displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Poi
 			switch (eventMenu.type) {
 			case SDL_QUIT:
 				return MenuName::Quit;
+			case SDL_WINDOWEVENT:
+				if (eventMenu.window.event == SDL_WINDOWEVENT_RESIZED) {
+					SDL_RenderSetScale(rendererMenu, eventMenu.window.data1 / (float)windowWidth, eventMenu.window.data2 / (float)windowHeight);
+				}
+				break;
 			case SDL_MOUSEMOTION:
 				mousePosMenu->x = eventMenu.motion.x;
 				mousePosMenu->y = eventMenu.motion.y;
@@ -572,7 +594,14 @@ MenuName displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Poi
 				break;
 			}
 		}
+
+		titleText.draw(rendererMenu);
 		for (MenuButton button : buttons) {
+			if (button.selected) {
+				uiSelectedR.x = button.buttonText.dstR.x - button.buttonText.dstR.w / 2.0f - uiSelectedR.w / 2.0f;
+				uiSelectedR.y = button.buttonText.dstR.y;
+				SDL_RenderCopyF(rendererMenu, uiSelectedT, 0, &uiSelectedR);
+			}
 			button.buttonText.draw(rendererMenu);
 		}
 
