@@ -3,10 +3,18 @@
 
 class Player : public Entity {
 public:
-	int health;
 	bool ghostBullet;
+	unsigned int streak;
 
 	Player();
 
 	Player(int health);
+
+	int GetHealth();
+
+	void SetHealth(int health);
+
+private:
+	int health;
+
 };

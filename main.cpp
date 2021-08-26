@@ -176,7 +176,7 @@ void UiInit() {
 	healthText.dstR.h = 20;
 	healthText.dstR.x = windowWidth - healthText.dstR.w;
 	healthText.dstR.y = 0;
-	healthText.setText(renderer, robotoF, player.health, { 255, 0, 0 });
+	healthText.setText(renderer, robotoF, player.GetHealth(), { 255, 0, 0 });
 
 	shieldHealthText.dstR.w = 50;
 	shieldHealthText.dstR.h = 30;
@@ -491,7 +491,7 @@ void EntityMovement(const SDL_FRect& extendedWindowR, float deltaTime) {
 		healthPickups[i].r.x += healthPickups[i].dx * deltaTime * PLANET_SPEED;
 		healthPickups[i].r.y += healthPickups[i].dy * deltaTime * PLANET_SPEED;
 		if (SDL_HasIntersectionF(&player.r, &healthPickups[i].r)) {
-			player.health += 10;
+			player.SetHealth(player.GetHealth() + 10);
 		}
 		if (SDL_HasIntersectionF(&player.r, &healthPickups[i].r)
 			|| !SDL_HasIntersectionF(&healthPickups[i].r, &extendedWindowR)) {
@@ -520,10 +520,8 @@ deleteCollidingBegin:
 
 					if (willDamage) {
 						shieldHealth--;
-#if _DEBUG
 						std::string sText = "Shield: " + std::to_string(shieldHealth);
 						shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
-#endif
 					}
 
 					if (shieldHealth <= 0) {
@@ -532,9 +530,9 @@ deleteCollidingBegin:
 					BounceOff(&bullets[i], &player, false);
 				}
 				else {
-					player.health--;
+					player.SetHealth(player.GetHealth() - 1);
 					bullets.erase(bullets.begin() + i--);
-					healthText.setText(renderer, robotoF, player.health, { 255, 0, 0 });
+					healthText.setText(renderer, robotoF, player.GetHealth(), { 255, 0, 0 });
 					goto deleteCollidingBegin;
 				}
 			}
@@ -548,6 +546,7 @@ deleteCollidingBegin:
 			if (SDL_HasIntersectionF(&bullets[i].r, &enemies[j].r)) {
 				enemies.erase(enemies.begin() + j--);
 				bullets.erase(bullets.begin() + i--);
+				player.streak++;
 				killPointsText.setText(renderer, robotoF, std::stoi(killPointsText.text) + 1);
 				if (std::stoi(killPointsText.text) % 100 == 0) {
 					moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 30);
@@ -615,9 +614,6 @@ void PowerUpSpawner() {
 	healthSpawnTime = healthSpawnTime == 0 ? random(HEALTH_SPAWN_MIN_DELAY_IN_MS, HEALTH_SPAWN_MAX_DELAY_IN_MS) : healthSpawnTime;
 	
 	if (healthPickupClock.getElapsedTime() > healthSpawnTime) {
-#ifdef _DEBUG
-		std::cout << "Spawned!\n";
-#endif
 		healthPickups.push_back(Entity());
 		healthPickups.back().r.w = 64;
 		healthPickups.back().r.h = 64;
