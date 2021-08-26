@@ -33,10 +33,12 @@ SDL_FRect moneyR;
 SDL_FRect shieldPrizeCoinsR;
 Text moneyText;
 bool hasShield = false;
-int shieldHealth = 10;
+int shieldHealth = 0;
 SDL_FRect closeBtnR;
 
 void WindowInit();
+
+void mainLoop();
 
 void TexturesInit();
 
@@ -47,6 +49,22 @@ void ClocksInit();
 void BounceOff(Entity* a, Entity* b, bool affectB);
 
 MenuName displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Point* mousePosMenu);
+
+void InputEvents(const SDL_Event& event);
+
+void EnemySpawn();
+
+void EntityMovement(const SDL_FRect& extendedWindowR, float deltaTime);
+
+void BulletCollisions(const SDL_FRect& extendedWindowR, float deltaTime);
+
+void EnemyBehavior(const SDL_FRect& extendedWindowR, float deltaTime);
+
+void PlanetSpawner();
+
+void RenderAll();
+
+void FireWhenReady();
 
 void mainLoop()
 {
@@ -60,48 +78,7 @@ void mainLoop()
 	extendedWindowR.y = -5;
 
 	while (SDL_PollEvent(&event)) {
-		if (event.type == SDL_QUIT || event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
-			running = false;
-			// TODO: On mobile remember to use eventWatch function (it doesn't reach this code when terminating)
-		}
-		if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED) {
-			SDL_RenderSetScale(renderer, event.window.data1 / (float)windowWidth, event.window.data2 / (float)windowHeight);
-		}
-		if (event.type == SDL_KEYDOWN) {
-			keys[event.key.keysym.scancode] = true;
-		}
-		if (event.type == SDL_KEYUP) {
-			keys[event.key.keysym.scancode] = false;
-		}
-		if (event.type == SDL_MOUSEBUTTONDOWN) {
-			buttons[event.button.button] = true;
-			if (SDL_PointInFRect(&mousePos, &closeBtnR) && buying) {
-				buying = false;
-			}
-			if (SDL_PointInFRect(&mousePos, &buyBtnR) && buying) {
-				if (std::stoi(moneyText.text) >= std::stoi(shieldPriceText.text)) {
-					hasShield = true;
-					shieldHealth = 10;
-#if _DEBUG
-					printf("Shield health: %d\n", shieldHealth);
-					std::string sText = "Shield: " + std::to_string(shieldHealth);
-					shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
-#endif
-					moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shieldPriceText.text));
-				}
-			}
-		}
-		if (event.type == SDL_MOUSEBUTTONUP) {
-			buttons[event.button.button] = false;
-		}
-		if (event.type == SDL_MOUSEMOTION) {
-			float scaleX, scaleY;
-			SDL_RenderGetScale(renderer, &scaleX, &scaleY);
-			mousePos.x = event.motion.x / scaleX;
-			mousePos.y = event.motion.y / scaleY;
-			realMousePos.x = event.motion.x;
-			realMousePos.y = event.motion.y;
-		}
+		InputEvents(event);
 	}
 	if (!buying) {
 		player.dx = 0;
@@ -119,237 +96,20 @@ void mainLoop()
 			player.dy = 1;
 		}
 		if (buttons[SDL_BUTTON_LEFT]) {
-			if (bulletClock.getElapsedTime() > BULLET_SPAWN_DELAY_IN_MS) {
-				//TODO: Encapsulate this in a function (and probably a different file)
-				bullets.push_back(Bullet(TargetMask::EnemiesMask));
-				bullets.back().r.w = 32;
-				bullets.back().r.h = 32;
-				bullets.back().r.x = player.r.x + player.r.w / 2 - bullets.back().r.w / 2;
-				bullets.back().r.y = player.r.y - bullets.back().r.h / 2;
-
-				//Get the direction on dy and dx from the normalized position of the mouse
-				SDL_FPoint fMousePos = MathUtils::ToSDL_FPoint(mousePos);
-				SDL_FPoint playerPos = {
-					player.r.x,
-					player.r.y
-				};
-
-				SDL_FPoint finalPos = MathUtils::VectorSubstract(fMousePos, playerPos);
-
-				MathUtils::Normalize(&finalPos);
-
-				bullets.back().dy = finalPos.y;
-				bullets.back().dx = finalPos.x;
-				bulletClock.restart();
-			}
-		}
-		for (int i = 0; i < bullets.size(); ++i) {
-			bullets[i].r.y += bullets[i].dy * deltaTime * BULLET_SPEED;
-			bullets[i].r.x += bullets[i].dx * deltaTime * BULLET_SPEED;
-		}
-		player.r.x += player.dx * deltaTime * PLAYER_SPEED;
-		player.r.y += player.dy * deltaTime * PLAYER_SPEED;
-		player.r.x = std::clamp(player.r.x, 0.0f, windowWidth - player.r.w);
-		player.r.y = std::clamp(player.r.y, 0.0f, windowHeight - player.r.h);
-		if (enemyClock.getElapsedTime() > ENEMY_SPAWN_DELAY_IN_MS) {
-			//Create a random interval for the shooting between a range defined by constants
-			int bulletInterval = random(MINIMUM_INTERVAL_BULLET_MS, MAXIMUM_INTERVAL_BULLET_MS);
-			enemies.push_back(Enemy(bulletInterval));
-			enemies.back().r.w = 32;
-			enemies.back().r.h = 32;
-			enemies.back().spawnPlace = (SpawnPlace)random(0, 3);
-
-			switch (enemies.back().spawnPlace) {
-			case SpawnPlace::Up:
-				enemies.back().r.x = random(0, windowWidth - enemies.back().r.w);
-				enemies.back().r.y = 0;
-				enemies.back().dy = 1;
-				break;
-			case SpawnPlace::Down:
-				enemies.back().r.x = random(0, windowWidth - enemies.back().r.w);
-				enemies.back().r.y = windowHeight;
-				enemies.back().dy = -1;
-				break;
-			case SpawnPlace::Left:
-				enemies.back().r.x = -enemies.back().r.w;
-				enemies.back().r.y = random(0, windowHeight - enemies.back().r.h);
-				enemies.back().dx = 1;
-				break;
-			case SpawnPlace::Right:
-				enemies.back().r.x = windowWidth;
-				enemies.back().r.y = random(0, windowHeight - enemies.back().r.h);
-				enemies.back().dx = -1;
-				break;
-			}
-			enemyClock.restart();
-		}
-		for (int i = 0; i < enemies.size(); ++i) {
-			enemies[i].r.x += enemies[i].dx * deltaTime * ENEMY_SPEED;
-			enemies[i].r.y += enemies[i].dy * deltaTime * ENEMY_SPEED;
+			FireWhenReady();
 		}
 
-	deleteCollidingBegin:
-		for (int i = 0; i < bullets.size(); ++i) {
-			//Player collision
-			if ((bullets[i].GetTargetMask() & TargetMask::PlayerMask) != 0) {
-				if (SDL_HasIntersectionF(&bullets[i].r, &player.r)) {
-					if (hasShield) {
-						bool willDamage = !bullets[i].bouncedOffShield;
+		EnemySpawn();		
+		
+		EntityMovement(extendedWindowR, deltaTime);
 
-						if (bullets[i].bouncedOffShield && bullets[i].shieldBounceDelay.getElapsedTime() > BULLET_SHIELD_BOUNCE_TOLERANCE) {
-							bullets[i].bouncedOffShield = false;
-						}
-						else {
-							bullets[i].bouncedOffShield = true;
-							bullets[i].shieldBounceDelay.restart();
-						}
+		BulletCollisions(extendedWindowR, deltaTime);
 
-						if (willDamage) {
-							shieldHealth--;
-#if _DEBUG
-							printf("Shield health: %d\n", shieldHealth);
-							std::string sText = "Shield: " + std::to_string(shieldHealth);
-							shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
-#endif
-						}
-						
-						if (shieldHealth <= 0) {
-							hasShield = false;
-						}
-						BounceOff(&bullets[i], &player, false);
-					}
-					else {
-						player.health--;
-						bullets.erase(bullets.begin() + i--);
-						healthText.setText(renderer, robotoF, player.health, { 255, 0, 0 });
-						goto deleteCollidingBegin;
-					}
-				}
-			}
+		EnemyBehavior(extendedWindowR, deltaTime);
 
-			//Enemy collision
-			for (int j = 0; j < enemies.size(); ++j) {
-				//Layer control
-				if ((bullets[i].GetTargetMask() & TargetMask::EnemiesMask) == 0)
-					continue;
-				if (SDL_HasIntersectionF(&bullets[i].r, &enemies[j].r)) {
-					enemies.erase(enemies.begin() + j--);
-					bullets.erase(bullets.begin() + i--);
-					killPointsText.setText(renderer, robotoF, std::stoi(killPointsText.text) + 1);
-					if (std::stoi(killPointsText.text) % 100 == 0) {
-						moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 30);
-					}
-					moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 1);
-					goto deleteCollidingBegin;
-				}
-			}
-
-			if ((bullets[i].lifetime + deltaTime) > BULLET_SPLIT_DELAY_IN_MS) {
-				bullets[i].Split(&bullets);
-				bullets[i].lifetime = 0;
-			}
-			else {
-				bullets[i].lifetime += deltaTime;
-			}
-
-			//Bullet collision
-			if (i != (bullets.size() - 1)) {
-				for (int j = i + 1; j < bullets.size(); ++j) {
-					bool timePassed = (bullets[i].lifetime > BULLET_COLLISION_DELAY_IN_MS) && (bullets[j].lifetime > BULLET_COLLISION_DELAY_IN_MS);
-					if (SDL_HasIntersectionF(&bullets[i].r, &bullets[j].r) && timePassed) {
-						BounceOff(&bullets[i], &bullets[j], true);
-					}
-				}
-			}
-
-			if (!SDL_HasIntersectionF(&bullets[i].r, &extendedWindowR)) {
-				bullets.erase(bullets.begin() + i--);
-			}
-		}
-
-		for (int i = 0; i < enemies.size(); ++i) {
-			SDL_FPoint playerPos = {
-				player.r.x,
-				player.r.y
-			};
-
-			enemies[i].Combat(enemyT, &bullets, playerPos, renderer);
-			SDL_FRect enemyR = enemies[i].r;
-			--enemyR.x;
-			--enemyR.y;
-			enemyR.w += 2;
-			enemyR.h += 2;
-			if (!SDL_HasIntersectionF(&enemies[i].r, &extendedWindowR)) {
-				enemies.erase(enemies.begin() + i--);
-			}
-		}
-		if (planetClock.getElapsedTime() > PLANET_SPAWN_DELAY_IN_MS) {
-			planets.push_back(Entity());
-			planets.back().r.w = 64;
-			planets.back().r.h = 64;
-			planets.back().r.x = random(0, windowWidth - planets.back().r.w);
-			planets.back().r.y = -planets.back().r.h;
-			planets.back().dy = 1;
-			planetClock.restart();
-		}
-		for (int i = 0; i < planets.size(); ++i) {
-			planets[i].r.x += planets[i].dx * deltaTime * PLANET_SPEED;
-			planets[i].r.y += planets[i].dy * deltaTime * PLANET_SPEED;
-			if (SDL_HasIntersectionF(&player.r, &planets[i].r)) {
-				buying = true;
-			}
-			if (SDL_HasIntersectionF(&player.r, &planets[i].r)
-				|| !SDL_HasIntersectionF(&planets[i].r, &extendedWindowR)) {
-				planets.erase(planets.begin() + i--);
-			}
-		}
+		PlanetSpawner();
 	}
-	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-	SDL_RenderClear(renderer);
-	SDL_RenderCopyF(renderer, bgT, 0, 0);
-	if (hasShield) {
-		SDL_RenderCopyF(renderer, shieldT, 0, &player.r);
-	}
-	RotateEntityTowards(playerT, player, mousePos, renderer);
-	//SDL_RenderCopyF(renderer, playerT, 0, &player.r);
-	for (int i = 0; i < bullets.size(); ++i) {
-		switch (bullets[i].GetTargetMask()) {
-		case TargetMask::PlayerMask:
-			SDL_RenderCopyF(renderer, redBulletT, 0, &bullets[i].r);
-			break;
-		case TargetMask::EnemiesMask | TargetMask::PlayerMask:
-			SDL_RenderCopyF(renderer, purpleBulletT, 0, &bullets[i].r);
-			break;
-		default:
-			SDL_RenderCopyF(renderer, bulletT, 0, &bullets[i].r);
-			break;
-		}
-	}
-	for (int i = 0; i < enemies.size(); ++i) {
-		//Based on the enemies' spawn position, rotate them to the proper angle
-		double angles[] = { 180.0, 0.0, 90.0, 270.0 }; // Array of rotations mapped to the enum of spawn positions
-		int index = (int)enemies[i].spawnPlace;
-		SDL_RenderCopyExF(renderer, enemyT, 0, &enemies[i].r, angles[index], 0, SDL_FLIP_NONE);
-	}
-	killPointsText.draw(renderer);
-	healthText.draw(renderer);
-	shieldHealthText.draw(renderer);
-	for (int i = 0; i < planets.size(); ++i) {
-		SDL_RenderCopyF(renderer, planetT, 0, &planets[i].r);
-	}
-	SDL_RenderCopyF(renderer, coinsT, 0, &moneyR);
-	moneyText.draw(renderer);
-	if (buying) {
-		SDL_SetRenderDrawColor(renderer, 125, 125, 125, 0);
-		SDL_RenderFillRectF(renderer, &buyR);
-		shieldPriceText.draw(renderer);
-		shieldText.draw(renderer);
-		SDL_RenderCopyF(renderer, buyT, 0, &buyBtnR);
-		SDL_RenderCopyF(renderer, shieldT, 0, &buyShieldR);
-		SDL_RenderCopyF(renderer, closeT, 0, &closeBtnR);
-		SDL_RenderCopyF(renderer, coinsT, 0, &shieldPrizeCoinsR);
-	}
-	SDL_RenderPresent(renderer);
+	RenderAll();
 }
 
 int main(int argc, char* argv[])
@@ -413,9 +173,9 @@ void UiInit() {
 	healthText.dstR.y = 0;
 	healthText.setText(renderer, robotoF, player.health, { 255, 0, 0 });
 
-	shieldHealthText.dstR.w = 30;
-	shieldHealthText.dstR.h = 20;
-	shieldHealthText.dstR.x = windowWidth / 2 - shieldPriceText.dstR.w / 2;
+	shieldHealthText.dstR.w = 50;
+	shieldHealthText.dstR.h = 30;
+	shieldHealthText.dstR.x = windowWidth / 3 - shieldPriceText.dstR.w / 3;
 	shieldHealthText.dstR.y = 0;
 	std::string sText = "Shield: " + std::to_string(shieldHealth);
 	shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
@@ -606,5 +366,305 @@ MenuName displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Poi
 		}
 
 		SDL_RenderPresent(rendererMenu);
+	}
+}
+
+void InputEvents(const SDL_Event& event) {
+	if (event.type == SDL_QUIT || event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
+		running = false;
+		// TODO: On mobile remember to use eventWatch function (it doesn't reach this code when terminating)
+	}
+	if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED) {
+		SDL_RenderSetScale(renderer, event.window.data1 / (float)windowWidth, event.window.data2 / (float)windowHeight);
+	}
+	if (event.type == SDL_KEYDOWN) {
+		keys[event.key.keysym.scancode] = true;
+	}
+	if (event.type == SDL_KEYUP) {
+		keys[event.key.keysym.scancode] = false;
+	}
+	if (event.type == SDL_MOUSEBUTTONDOWN) {
+		buttons[event.button.button] = true;
+		if (SDL_PointInFRect(&mousePos, &closeBtnR) && buying) {
+			buying = false;
+		}
+		if (SDL_PointInFRect(&mousePos, &buyBtnR) && buying) {
+			if (std::stoi(moneyText.text) >= std::stoi(shieldPriceText.text)) {
+				hasShield = true;
+				shieldHealth = 10;
+#if _DEBUG
+				std::string sText = "Shield: " + std::to_string(shieldHealth);
+				shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
+#endif
+				moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shieldPriceText.text));
+			}
+		}
+	}
+	if (event.type == SDL_MOUSEBUTTONUP) {
+		buttons[event.button.button] = false;
+	}
+	if (event.type == SDL_MOUSEMOTION) {
+		float scaleX, scaleY;
+		SDL_RenderGetScale(renderer, &scaleX, &scaleY);
+		mousePos.x = event.motion.x / scaleX;
+		mousePos.y = event.motion.y / scaleY;
+		realMousePos.x = event.motion.x;
+		realMousePos.y = event.motion.y;
+	}
+}
+
+void EnemySpawn() {
+	if (enemyClock.getElapsedTime() > ENEMY_SPAWN_DELAY_IN_MS) {
+		//Create a random interval for the shooting between a range defined by constants
+		int bulletInterval = random(MINIMUM_INTERVAL_BULLET_MS, MAXIMUM_INTERVAL_BULLET_MS);
+		enemies.push_back(Enemy(bulletInterval));
+		enemies.back().r.w = 32;
+		enemies.back().r.h = 32;
+		enemies.back().spawnPlace = (SpawnPlace)random(0, 3);
+
+		switch (enemies.back().spawnPlace) {
+		case SpawnPlace::Up:
+			enemies.back().r.x = random(0, windowWidth - enemies.back().r.w);
+			enemies.back().r.y = 0;
+			enemies.back().dy = 1;
+			break;
+		case SpawnPlace::Down:
+			enemies.back().r.x = random(0, windowWidth - enemies.back().r.w);
+			enemies.back().r.y = windowHeight;
+			enemies.back().dy = -1;
+			break;
+		case SpawnPlace::Left:
+			enemies.back().r.x = -enemies.back().r.w;
+			enemies.back().r.y = random(0, windowHeight - enemies.back().r.h);
+			enemies.back().dx = 1;
+			break;
+		case SpawnPlace::Right:
+			enemies.back().r.x = windowWidth;
+			enemies.back().r.y = random(0, windowHeight - enemies.back().r.h);
+			enemies.back().dx = -1;
+			break;
+		}
+		enemyClock.restart();
+	}
+}
+
+void EntityMovement(const SDL_FRect& extendedWindowR, float deltaTime) {
+	//Bullet movement
+	for (int i = 0; i < bullets.size(); ++i) {
+		bullets[i].r.y += bullets[i].dy * deltaTime * BULLET_SPEED;
+		bullets[i].r.x += bullets[i].dx * deltaTime * BULLET_SPEED;
+	}
+
+	//Player movement
+	player.r.x += player.dx * deltaTime * PLAYER_SPEED;
+	player.r.y += player.dy * deltaTime * PLAYER_SPEED;
+	player.r.x = std::clamp(player.r.x, 0.0f, windowWidth - player.r.w);
+	player.r.y = std::clamp(player.r.y, 0.0f, windowHeight - player.r.h);
+
+	//Enemy movement
+	for (int i = 0; i < enemies.size(); ++i) {
+		enemies[i].r.x += enemies[i].dx * deltaTime * ENEMY_SPEED;
+		enemies[i].r.y += enemies[i].dy * deltaTime * ENEMY_SPEED;
+	}
+
+	//Planet's movement
+	for (int i = 0; i < planets.size(); ++i) {
+		planets[i].r.x += planets[i].dx * deltaTime * PLANET_SPEED;
+		planets[i].r.y += planets[i].dy * deltaTime * PLANET_SPEED;
+		if (SDL_HasIntersectionF(&player.r, &planets[i].r)) {
+			buying = true;
+		}
+		if (SDL_HasIntersectionF(&player.r, &planets[i].r)
+			|| !SDL_HasIntersectionF(&planets[i].r, &extendedWindowR)) {
+			planets.erase(planets.begin() + i--);
+		}
+	}
+
+}
+
+void BulletCollisions(const SDL_FRect& extendedWindowR, float deltaTime) {
+deleteCollidingBegin:
+	for (int i = 0; i < bullets.size(); ++i) {
+		//Player collision
+		if ((bullets[i].GetTargetMask() & TargetMask::PlayerMask) != 0) {
+			if (SDL_HasIntersectionF(&bullets[i].r, &player.r)) {
+				if (hasShield) {
+					bool willDamage = !bullets[i].bouncedOffShield;
+
+					if (bullets[i].bouncedOffShield && bullets[i].shieldBounceDelay.getElapsedTime() > BULLET_SHIELD_BOUNCE_TOLERANCE) {
+						bullets[i].bouncedOffShield = false;
+					}
+					else {
+						bullets[i].bouncedOffShield = true;
+						bullets[i].shieldBounceDelay.restart();
+					}
+
+					if (willDamage) {
+						shieldHealth--;
+#if _DEBUG
+						std::string sText = "Shield: " + std::to_string(shieldHealth);
+						shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
+#endif
+					}
+
+					if (shieldHealth <= 0) {
+						hasShield = false;
+					}
+					BounceOff(&bullets[i], &player, false);
+				}
+				else {
+					player.health--;
+					bullets.erase(bullets.begin() + i--);
+					healthText.setText(renderer, robotoF, player.health, { 255, 0, 0 });
+					goto deleteCollidingBegin;
+				}
+			}
+		}
+
+		//Enemy collision
+		for (int j = 0; j < enemies.size(); ++j) {
+			//Layer control
+			if ((bullets[i].GetTargetMask() & TargetMask::EnemiesMask) == 0)
+				continue;
+			if (SDL_HasIntersectionF(&bullets[i].r, &enemies[j].r)) {
+				enemies.erase(enemies.begin() + j--);
+				bullets.erase(bullets.begin() + i--);
+				killPointsText.setText(renderer, robotoF, std::stoi(killPointsText.text) + 1);
+				if (std::stoi(killPointsText.text) % 100 == 0) {
+					moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 30);
+				}
+				moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 1);
+				goto deleteCollidingBegin;
+			}
+		}
+
+		if ((bullets[i].lifetime + deltaTime) > BULLET_SPLIT_DELAY_IN_MS) {
+			bullets[i].Split(&bullets);
+			bullets[i].lifetime = 0;
+		}
+		else {
+			bullets[i].lifetime += deltaTime;
+		}
+
+		//Bullet collision
+		if (i != (bullets.size() - 1)) {
+			for (int j = i + 1; j < bullets.size(); ++j) {
+				bool timePassed = (bullets[i].lifetime > BULLET_COLLISION_DELAY_IN_MS) && (bullets[j].lifetime > BULLET_COLLISION_DELAY_IN_MS);
+				if (SDL_HasIntersectionF(&bullets[i].r, &bullets[j].r) && timePassed) {
+					BounceOff(&bullets[i], &bullets[j], true);
+				}
+			}
+		}
+
+		if (!SDL_HasIntersectionF(&bullets[i].r, &extendedWindowR)) {
+			bullets.erase(bullets.begin() + i--);
+		}
+	}
+}
+
+void EnemyBehavior(const SDL_FRect& extendedWindowR, float deltaTime) {
+	for (int i = 0; i < enemies.size(); ++i) {
+		SDL_FPoint playerPos = {
+			player.r.x,
+			player.r.y
+		};
+
+		enemies[i].Combat(enemyT, &bullets, playerPos, renderer);
+		SDL_FRect enemyR = enemies[i].r;
+		--enemyR.x;
+		--enemyR.y;
+		enemyR.w += 2;
+		enemyR.h += 2;
+		if (!SDL_HasIntersectionF(&enemies[i].r, &extendedWindowR)) {
+			enemies.erase(enemies.begin() + i--);
+		}
+	}
+}
+
+void PlanetSpawner() {
+	if (planetClock.getElapsedTime() > PLANET_SPAWN_DELAY_IN_MS) {
+		planets.push_back(Entity());
+		planets.back().r.w = 64;
+		planets.back().r.h = 64;
+		planets.back().r.x = random(0, windowWidth - planets.back().r.w);
+		planets.back().r.y = -planets.back().r.h;
+		planets.back().dy = 1;
+		planetClock.restart();
+	}
+}
+
+void RenderAll() {
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+	SDL_RenderClear(renderer);
+	SDL_RenderCopyF(renderer, bgT, 0, 0);
+	if (hasShield) {
+		SDL_RenderCopyF(renderer, shieldT, 0, &player.r);
+	}
+	RotateEntityTowards(playerT, player, mousePos, renderer);
+	//SDL_RenderCopyF(renderer, playerT, 0, &player.r);
+	for (int i = 0; i < bullets.size(); ++i) {
+		switch (bullets[i].GetTargetMask()) {
+		case TargetMask::PlayerMask:
+			SDL_RenderCopyF(renderer, redBulletT, 0, &bullets[i].r);
+			break;
+		case TargetMask::EnemiesMask | TargetMask::PlayerMask:
+			SDL_RenderCopyF(renderer, purpleBulletT, 0, &bullets[i].r);
+			break;
+		default:
+			SDL_RenderCopyF(renderer, bulletT, 0, &bullets[i].r);
+			break;
+		}
+	}
+	for (int i = 0; i < enemies.size(); ++i) {
+		//Based on the enemies' spawn position, rotate them to the proper angle
+		double angles[] = { 180.0, 0.0, 90.0, 270.0 }; // Array of rotations mapped to the enum of spawn positions
+		int index = (int)enemies[i].spawnPlace;
+		SDL_RenderCopyExF(renderer, enemyT, 0, &enemies[i].r, angles[index], 0, SDL_FLIP_NONE);
+	}
+	killPointsText.draw(renderer);
+	healthText.draw(renderer);
+	if (hasShield)
+		shieldHealthText.draw(renderer);
+	for (int i = 0; i < planets.size(); ++i) {
+		SDL_RenderCopyF(renderer, planetT, 0, &planets[i].r);
+	}
+	SDL_RenderCopyF(renderer, coinsT, 0, &moneyR);
+	moneyText.draw(renderer);
+	if (buying) {
+		SDL_SetRenderDrawColor(renderer, 125, 125, 125, 0);
+		SDL_RenderFillRectF(renderer, &buyR);
+		shieldPriceText.draw(renderer);
+		shieldText.draw(renderer);
+		SDL_RenderCopyF(renderer, buyT, 0, &buyBtnR);
+		SDL_RenderCopyF(renderer, shieldT, 0, &buyShieldR);
+		SDL_RenderCopyF(renderer, closeT, 0, &closeBtnR);
+		SDL_RenderCopyF(renderer, coinsT, 0, &shieldPrizeCoinsR);
+	}
+	SDL_RenderPresent(renderer);
+}
+
+void FireWhenReady() {
+	if (bulletClock.getElapsedTime() > BULLET_SPAWN_DELAY_IN_MS) {
+		//TODO: Encapsulate this in a function (and probably a different file)
+		bullets.push_back(Bullet(TargetMask::EnemiesMask));
+		bullets.back().r.w = 32;
+		bullets.back().r.h = 32;
+		bullets.back().r.x = player.r.x + player.r.w / 2 - bullets.back().r.w / 2;
+		bullets.back().r.y = player.r.y - bullets.back().r.h / 2;
+
+		//Get the direction on dy and dx from the normalized position of the mouse
+		SDL_FPoint fMousePos = MathUtils::ToSDL_FPoint(mousePos);
+		SDL_FPoint playerPos = {
+			player.r.x,
+			player.r.y
+		};
+
+		SDL_FPoint finalPos = MathUtils::VectorSubstract(fMousePos, playerPos);
+
+		MathUtils::Normalize(&finalPos);
+
+		bullets.back().dy = finalPos.y;
+		bullets.back().dx = finalPos.x;
+		bulletClock.restart();
 	}
 }

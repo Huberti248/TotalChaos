@@ -4,6 +4,7 @@
 class Player : public Entity {
 public:
 	int health;
+	bool ghostBullet;
 
 	Player();
 
