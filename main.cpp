@@ -9,6 +9,7 @@ SDL_Texture* purpleBulletT;
 SDL_Texture* enemyT;
 SDL_Texture* planetT;
 SDL_Texture* meatT;
+SDL_Texture* explosionT;
 SDL_Texture* buyT;
 SDL_Texture* shieldT;
 SDL_Texture* closeT;
@@ -25,6 +26,8 @@ std::vector<Entity> planets;
 Clock planetClock;
 std::vector<Entity> healthPickups;
 Clock healthPickupClock;
+std::vector<Entity> bombs;
+Clock bombClock;
 bool buying = false;
 Text shieldPriceText;
 Text shieldText;
@@ -70,6 +73,7 @@ void RenderAll();
 
 void FireWhenReady();
 
+
 void mainLoop()
 {
 	float deltaTime = globalClock.restart();
@@ -101,6 +105,50 @@ void mainLoop()
 		}
 		if (buttons[SDL_BUTTON_LEFT]) {
 			FireWhenReady();
+		}
+		if (buttons[SDL_BUTTON_RIGHT] && player.hasBomb) {
+			//If you have a bomb destroy every bullet and enemy within a radius
+			for (size_t i = 0; i < bullets.size(); i++) {
+				//Don't destroy the player's bullets
+				if (bullets[i].GetTargetMask() == TargetMask::EnemiesMask) continue;
+				//Check if the bullet is within the radius
+				SDL_FPoint playerPos = {
+					player.r.x,
+					player.r.y
+				};
+
+				SDL_FPoint bulletPos = {
+					bullets[i].r.x,
+					bullets[i].r.y
+				};
+
+				float sqrDis = MathUtils::DistanceSqr(bulletPos, playerPos);
+
+				if (sqrDis > (BOMB_RADIUS * BOMB_RADIUS)) continue;
+				bullets.erase(bullets.begin() + i--); //Destroy the bullet if it is within the radius
+			}
+
+			for (size_t i = 0; i < enemies.size(); i++) {
+				SDL_FPoint playerPos = {
+					player.r.x,
+					player.r.y
+				};
+
+				SDL_FPoint enemyPos = {
+					enemies[i].r.x,
+					enemies[i].r.y
+				};
+
+				float sqrDis = MathUtils::DistanceSqr(enemyPos, playerPos);
+
+				if (sqrDis > (BOMB_RADIUS * BOMB_RADIUS)) continue;
+				enemies.erase(enemies.begin() + i--); //Destroy the enemy if it is within the radius
+			}
+
+			//Reset the player's streak
+			//TODO: Make this a function on the getters and setters of hasBomb
+			player.streak = 0;
+			player.hasBomb = false;
 		}
 
 		EnemySpawn();		
@@ -153,6 +201,10 @@ void TexturesInit() {
 	enemyT = IMG_LoadTexture(renderer, "res/enemy.png");
 	planetT = IMG_LoadTexture(renderer, "res/planet.png");
 	meatT = IMG_LoadTexture(renderer, "res/meat.png");
+#ifdef _DEBUG //Debug define guard on purpose to generate an error if we don't replace this
+	//TODO: REPLCE THIS, AS IT IS ONLY A PLACEHOLDER!!!!
+	explosionT = IMG_LoadTexture(renderer, "res/gun.png");
+#endif
 	buyT = IMG_LoadTexture(renderer, "res/buy.png");
 	shieldT = IMG_LoadTexture(renderer, "res/shield.png");
 	closeT = IMG_LoadTexture(renderer, "res/close.png");
@@ -499,6 +551,18 @@ void EntityMovement(const SDL_FRect& extendedWindowR, float deltaTime) {
 		}
 	}
 
+	//Explosion's movement
+	for (size_t i = 0; i < bombs.size(); ++i) {
+		bombs[i].r.x += bombs[i].dx * deltaTime * PLANET_SPEED;
+		bombs[i].r.y += bombs[i].dy * deltaTime * PLANET_SPEED;
+		if (SDL_HasIntersectionF(&player.r, &bombs[i].r)) {
+			player.hasBomb = true;
+		}
+		if (SDL_HasIntersectionF(&player.r, &bombs[i].r)
+			|| !SDL_HasIntersectionF(&bombs[i].r, &extendedWindowR)) {
+			bombs.erase(bombs.begin() + i--);
+		}
+	}
 }
 
 void BulletCollisions(const SDL_FRect& extendedWindowR, float deltaTime) {
@@ -544,9 +608,9 @@ deleteCollidingBegin:
 			if ((bullets[i].GetTargetMask() & TargetMask::EnemiesMask) == 0)
 				continue;
 			if (SDL_HasIntersectionF(&bullets[i].r, &enemies[j].r)) {
+				player.streak++;
 				enemies.erase(enemies.begin() + j--);
 				bullets.erase(bullets.begin() + i--);
-				player.streak++;
 				killPointsText.setText(renderer, robotoF, std::stoi(killPointsText.text) + 1);
 				if (std::stoi(killPointsText.text) % 100 == 0) {
 					moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 30);
@@ -624,6 +688,16 @@ void PowerUpSpawner() {
 		healthPickupClock.restart();
 	}
 
+	if (!player.hasBomb && player.streak >= 6 && bombs.size() < 1) {
+		//Create the bomb
+		bombs.push_back(Entity());
+		bombs.back().r.w = 64;
+		bombs.back().r.h = 64;
+		bombs.back().r.x = random(0, windowWidth - bombs.back().r.w);
+		bombs.back().r.y = -bombs.back().r.h;
+		bombs.back().dy = 1;
+	}
+
 }
 
 void RenderAll() {
@@ -673,6 +747,13 @@ void RenderAll() {
 	for (size_t i = 0; i < healthPickups.size(); i++) {
 		SDL_RenderCopyF(renderer, meatT, 0, &healthPickups[i].r);
 	}
+
+
+	//Render bomb
+	for (size_t i = 0; i < bombs.size(); i++) {
+		SDL_RenderCopyF(renderer, explosionT, 0, &bombs[i].r);
+	}
+
 	SDL_RenderCopyF(renderer, coinsT, 0, &moneyR);
 	moneyText.draw(renderer);
 	if (buying) {

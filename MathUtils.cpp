@@ -33,6 +33,10 @@ float MathUtils::GetMagnitude(const SDL_Point& point) {
 	return sqrtf((point.x * point.x) + (point.y * point.y));
 }
 
+float MathUtils::GetMagnitudeSqr(const SDL_FPoint& point) {
+	return (point.x * point.x) + (point.y * point.y);
+}
+
 SDL_FPoint MathUtils::GetNormalized(float x, float y) {
 	float mag = GetMagnitude(x, y);
 	
@@ -81,6 +85,12 @@ SDL_FPoint MathUtils::VectorSubstract(const SDL_Point& a, const SDL_Point& b) {
 void MathUtils::VectorSubstract(SDL_Point* a, const SDL_Point& b) {
 	a->x -= b.x;
 	a->y -= b.y;
+}
+
+float MathUtils::DistanceSqr(const SDL_FPoint& a, const SDL_FPoint& b) {
+	//Sub the vectors and then get the magnitude of that sqr (that should be the distance sqr)
+	SDL_FPoint difference = VectorSubstract(a, b);
+	return GetMagnitudeSqr(difference);
 }
 
 SDL_FPoint MathUtils::ToSDL_FPoint(const SDL_Point& point) {

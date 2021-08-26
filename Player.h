@@ -4,6 +4,7 @@
 class Player : public Entity {
 public:
 	bool ghostBullet;
+	bool hasBomb;
 	unsigned int streak;
 
 	Player();
