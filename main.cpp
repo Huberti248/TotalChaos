@@ -163,8 +163,8 @@ void mainLoop()
         EnemyBehavior(extendedWindowR, deltaTime);
 
         PowerUpSpawner();
-
-        if (portalClock.getElapsedTime() > PORTAL_SPAWN_DELAY_IN_MS) {
+        //To Review (more than one portal at a time)
+        if (portalClock.getElapsedTime() > PORTAL_SPAWN_DELAY_IN_MS && portalRects.size() < 1) {
             portalRects.push_back(SDL_FRect());
             portalRects.back().w = 32;
             portalRects.back().h = 32;
@@ -190,10 +190,12 @@ void mainLoop()
                 if (i % 2 != 0) {
                     portalRects.erase(portalRects.begin() + i--);
                     portalRects.erase(portalRects.begin() + i);
+                    portalClock.restart(); // To review
                 }
                 else {
                     portalRects.erase(portalRects.begin() + i);
                     portalRects.erase(portalRects.begin() + i--);
+                    portalClock.restart(); // To review
                 }
             }
         }
@@ -242,6 +244,7 @@ void TexturesInit() {
 	//TODO: REPLCE THIS, AS IT IS ONLY A PLACEHOLDER!!!!
 	explosionT = IMG_LoadTexture(renderer, "res/gun.png");
 #endif
+    portalT = IMG_LoadTexture(renderer, "res/portal.png");
 	buyT = IMG_LoadTexture(renderer, "res/buy.png");
 	shieldT = IMG_LoadTexture(renderer, "res/shield.png");
 	closeT = IMG_LoadTexture(renderer, "res/close.png");
@@ -737,7 +740,7 @@ void PowerUpSpawner()
 		healthPickupClock.restart();
 	}
 
-	if (!player.hasBomb && player.streak >= 6 && bombs.size() < 1) {
+	if (!player.hasBomb && player.streak >= STREAK_BOMB_REQUIREMENT && bombs.size() < 1) {
 		//Create the bomb
 		bombs.push_back(Entity());
 		bombs.back().r.w = 64;
@@ -798,6 +801,10 @@ void RenderAll()
 		SDL_RenderCopyF(renderer, meatT, 0, &healthPickups[i].r);
 	}
 
+    //Render portals
+    for (int i = 0; i < portalRects.size(); ++i) {
+        SDL_RenderCopyF(renderer, portalT, 0, &portalRects[i]);
+    }
 
 	//Render bomb
 	for (size_t i = 0; i < bombs.size(); i++) {
