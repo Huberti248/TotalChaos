@@ -81,6 +81,7 @@ using namespace std::chrono_literals;
 #define PLANET_SPAWN_DELAY_IN_MS 30000
 #define HEALTH_SPAWN_MIN_DELAY_IN_MS 30000
 #define HEALTH_SPAWN_MAX_DELAY_IN_MS 90000
+#define PORTAL_SPAWN_DELAY_IN_MS 5000
 #define BOMB_RADIUS 215
 
 
