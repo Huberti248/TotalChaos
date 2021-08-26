@@ -600,7 +600,7 @@ void EnemyBehavior(const SDL_FRect& extendedWindowR, float deltaTime) {
 }
 
 void PowerUpSpawner() {
-	if (planetClock.getElapsedTime() > PLANET_SPAWN_DELAY_IN_MS) {
+	if (planetClock.getElapsedTime() > PLANET_SPAWN_DELAY_IN_MS && !hasShield) {
 		planets.push_back(Entity());
 		planets.back().r.w = 64;
 		planets.back().r.h = 64;
