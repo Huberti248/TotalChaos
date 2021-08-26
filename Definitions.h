@@ -83,7 +83,7 @@ using namespace std::chrono_literals;
 #define HEALTH_SPAWN_MAX_DELAY_IN_MS 90000
 #define PORTAL_SPAWN_DELAY_IN_MS 5000
 #define STREAK_BOMB_REQUIREMENT 20
-#define BOMB_RADIUS 215
+#define BOMB_RADIUS 500
 
 
 SDL_Window* window;

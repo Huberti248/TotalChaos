@@ -759,6 +759,7 @@ void RenderAll()
     SDL_RenderCopyF(renderer, bgT, 0, 0);
     if (hasShield) {
         SDL_RenderCopyF(renderer, shieldT, 0, &player.r);
+        shieldHealthText.draw(renderer);
     }
     RotateEntityTowards(playerT, player, mousePos, renderer);
     //SDL_RenderCopyF(renderer, playerT, 0, &player.r);
@@ -788,8 +789,6 @@ void RenderAll()
     //Render UI text
     killPointsText.draw(renderer);
     healthText.draw(renderer);
-    if (hasShield)
-        shieldHealthText.draw(renderer);
 
     //Renders planets
     for (int i = 0; i < planets.size(); ++i) {
