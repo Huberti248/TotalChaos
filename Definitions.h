@@ -49,6 +49,7 @@ using namespace std::chrono_literals;
 
 #include "MathUtils.h"
 #include "Movement.h"
+#include "Menu.h"
 #include "Entity.h"
 #include "Player.h"
 #include "Enemy.h"
@@ -77,7 +78,9 @@ using namespace std::chrono_literals;
 #define MINIMUM_INTERVAL_BULLET_MS 2000
 #define MAXIMUM_INTERVAL_BULLET_MS 7000
 #define BULLET_COLLISION_DELAY_IN_MS 100
-#define PLANET_SPAWN_DELAY_IN_MS 10000
+#define PLANET_SPAWN_DELAY_IN_MS 30000
+#define HEALTH_SPAWN_MIN_DELAY_IN_MS 30000
+#define HEALTH_SPAWN_MAX_DELAY_IN_MS 90000
 
 
 SDL_Window* window;
