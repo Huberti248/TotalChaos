@@ -390,6 +390,8 @@ SDL_Texture* buyT;
 SDL_Texture* shieldT;
 SDL_Texture* closeT;
 SDL_Texture* coinsT;
+SDL_Texture* blueTrailT;
+Mix_Chunk* lasersS;
 Clock globalClock;
 std::vector<Bullet> bullets;
 Clock bulletClock;
@@ -499,6 +501,9 @@ void mainLoop()
 
                 bullets.back().dy = finalPos.y;
                 bullets.back().dx = finalPos.x;
+
+                Mix_PlayChannel(-1, lasersS, 0);
+
                 bulletClock.restart();
             }
         }
@@ -655,7 +660,7 @@ void mainLoop()
                 enemies.erase(enemies.begin() + i--);
             }
         }
-        if (planetClock.getElapsedTime() > PLANET_SPAWN_DELAY_IN_MS) {
+        if (planetClock.getElapsedTime() > PLANET_SPAWN_DELAY_IN_MS && !hasShield) {
             planets.push_back(Entity());
             planets.back().r.w = 64;
             planets.back().r.h = 64;
@@ -718,7 +723,7 @@ void mainLoop()
         SDL_RenderCopyF(renderer, buyT, 0, &buyBtnR);
         SDL_RenderCopyF(renderer, shieldT, 0, &buyShieldR);
         SDL_RenderCopyF(renderer, closeT, 0, &closeBtnR);
-    SDL_RenderCopyF(renderer, coinsT, 0, &shieldPrizeCoinsR);
+        SDL_RenderCopyF(renderer, coinsT, 0, &shieldPrizeCoinsR);
     }
     SDL_RenderPresent(renderer);
 }
@@ -730,6 +735,7 @@ int main(int argc, char* argv[])
     SDL_LogSetOutputFunction(logOutputCallback, 0);
     SDL_Init(SDL_INIT_EVERYTHING);
     TTF_Init();
+    Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048);
     SDL_GetMouseState(&mousePos.x, &mousePos.y);
     window = SDL_CreateWindow("TotalChaos", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_RESIZABLE);
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
@@ -749,6 +755,8 @@ int main(int argc, char* argv[])
     shieldT = IMG_LoadTexture(renderer, "res/shield.png");
     closeT = IMG_LoadTexture(renderer, "res/close.png");
     coinsT = IMG_LoadTexture(renderer, "res/coins.png");
+    blueTrailT = IMG_LoadTexture(renderer, "res/blueTrail.png");
+    lasersS = Mix_LoadWAV("res/sound fx/lasers.ogg");
     player.r.w = 32;
     player.r.h = 32;
     player.r.x = windowWidth / 2 - player.r.w / 2;
@@ -793,7 +801,7 @@ int main(int argc, char* argv[])
     moneyR.h = 32;
     moneyR.x = windowWidth - moneyR.w;
     moneyR.y = healthText.dstR.y + healthText.dstR.h;
-    moneyText.setText(renderer, robotoF, 0);
+    moneyText.setText(renderer, robotoF, 100);
     moneyText.dstR.w = 30;
     moneyText.dstR.h = 20;
     moneyText.dstR.x = moneyR.x - moneyText.dstR.w;
