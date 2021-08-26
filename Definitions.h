@@ -79,6 +79,8 @@ using namespace std::chrono_literals;
 #define MAXIMUM_INTERVAL_BULLET_MS 7000
 #define BULLET_COLLISION_DELAY_IN_MS 100
 #define PLANET_SPAWN_DELAY_IN_MS 30000
+#define HEALTH_SPAWN_MIN_DELAY_IN_MS 30000
+#define HEALTH_SPAWN_MAX_DELAY_IN_MS 90000
 
 
 SDL_Window* window;

@@ -8,6 +8,7 @@ SDL_Texture* redBulletT;
 SDL_Texture* purpleBulletT;
 SDL_Texture* enemyT;
 SDL_Texture* planetT;
+SDL_Texture* meatT;
 SDL_Texture* buyT;
 SDL_Texture* shieldT;
 SDL_Texture* closeT;
@@ -22,6 +23,8 @@ Text killPointsText;
 Text healthText;
 std::vector<Entity> planets;
 Clock planetClock;
+std::vector<Entity> healthPickups;
+Clock healthPickupClock;
 bool buying = false;
 Text shieldPriceText;
 Text shieldText;
@@ -35,6 +38,7 @@ Text moneyText;
 bool hasShield = false;
 int shieldHealth = 0;
 SDL_FRect closeBtnR;
+int healthSpawnTime = 0;
 
 void WindowInit();
 
@@ -60,7 +64,7 @@ void BulletCollisions(const SDL_FRect& extendedWindowR, float deltaTime);
 
 void EnemyBehavior(const SDL_FRect& extendedWindowR, float deltaTime);
 
-void PlanetSpawner();
+void PowerUpSpawner();
 
 void RenderAll();
 
@@ -107,7 +111,7 @@ void mainLoop()
 
 		EnemyBehavior(extendedWindowR, deltaTime);
 
-		PlanetSpawner();
+		PowerUpSpawner();
 	}
 	RenderAll();
 }
@@ -148,6 +152,7 @@ void TexturesInit() {
 	purpleBulletT = IMG_LoadTexture(renderer, "res/bulletPurple.png");
 	enemyT = IMG_LoadTexture(renderer, "res/enemy.png");
 	planetT = IMG_LoadTexture(renderer, "res/planet.png");
+	meatT = IMG_LoadTexture(renderer, "res/meat.png");
 	buyT = IMG_LoadTexture(renderer, "res/buy.png");
 	shieldT = IMG_LoadTexture(renderer, "res/shield.png");
 	closeT = IMG_LoadTexture(renderer, "res/close.png");
@@ -229,6 +234,7 @@ void ClocksInit() {
 	bulletClock.restart();
 	enemyClock.restart();
 	planetClock.restart();
+	healthPickupClock.restart();
 }
 
 void WindowInit() {
@@ -480,6 +486,19 @@ void EntityMovement(const SDL_FRect& extendedWindowR, float deltaTime) {
 		}
 	}
 
+	//Health pickup's movement
+	for (int i = 0; i < healthPickups.size(); ++i) {
+		healthPickups[i].r.x += healthPickups[i].dx * deltaTime * PLANET_SPEED;
+		healthPickups[i].r.y += healthPickups[i].dy * deltaTime * PLANET_SPEED;
+		if (SDL_HasIntersectionF(&player.r, &healthPickups[i].r)) {
+			player.health += 10;
+		}
+		if (SDL_HasIntersectionF(&player.r, &healthPickups[i].r)
+			|| !SDL_HasIntersectionF(&healthPickups[i].r, &extendedWindowR)) {
+			healthPickups.erase(healthPickups.begin() + i--);
+		}
+	}
+
 }
 
 void BulletCollisions(const SDL_FRect& extendedWindowR, float deltaTime) {
@@ -581,7 +600,7 @@ void EnemyBehavior(const SDL_FRect& extendedWindowR, float deltaTime) {
 	}
 }
 
-void PlanetSpawner() {
+void PowerUpSpawner() {
 	if (planetClock.getElapsedTime() > PLANET_SPAWN_DELAY_IN_MS) {
 		planets.push_back(Entity());
 		planets.back().r.w = 64;
@@ -591,6 +610,24 @@ void PlanetSpawner() {
 		planets.back().dy = 1;
 		planetClock.restart();
 	}
+
+	//Randomize the spawn time of the health
+	healthSpawnTime = healthSpawnTime == 0 ? random(HEALTH_SPAWN_MIN_DELAY_IN_MS, HEALTH_SPAWN_MAX_DELAY_IN_MS) : healthSpawnTime;
+	
+	if (healthPickupClock.getElapsedTime() > healthSpawnTime) {
+#ifdef _DEBUG
+		std::cout << "Spawned!\n";
+#endif
+		healthPickups.push_back(Entity());
+		healthPickups.back().r.w = 64;
+		healthPickups.back().r.h = 64;
+		healthPickups.back().r.x = random(0, windowWidth - healthPickups.back().r.w);
+		healthPickups.back().r.y = -healthPickups.back().r.h;
+		healthPickups.back().dy = 1;
+		healthSpawnTime = 0;
+		healthPickupClock.restart();
+	}
+
 }
 
 void RenderAll() {
@@ -602,6 +639,8 @@ void RenderAll() {
 	}
 	RotateEntityTowards(playerT, player, mousePos, renderer);
 	//SDL_RenderCopyF(renderer, playerT, 0, &player.r);
+	
+	//Render bullets
 	for (int i = 0; i < bullets.size(); ++i) {
 		switch (bullets[i].GetTargetMask()) {
 		case TargetMask::PlayerMask:
@@ -615,18 +654,28 @@ void RenderAll() {
 			break;
 		}
 	}
+
+	//Render enemies
 	for (int i = 0; i < enemies.size(); ++i) {
 		//Based on the enemies' spawn position, rotate them to the proper angle
 		double angles[] = { 180.0, 0.0, 90.0, 270.0 }; // Array of rotations mapped to the enum of spawn positions
 		int index = (int)enemies[i].spawnPlace;
 		SDL_RenderCopyExF(renderer, enemyT, 0, &enemies[i].r, angles[index], 0, SDL_FLIP_NONE);
 	}
+	//Render UI text
 	killPointsText.draw(renderer);
 	healthText.draw(renderer);
 	if (hasShield)
 		shieldHealthText.draw(renderer);
+	
+	//Renders planets
 	for (int i = 0; i < planets.size(); ++i) {
 		SDL_RenderCopyF(renderer, planetT, 0, &planets[i].r);
+	}
+
+	//Renders meat
+	for (size_t i = 0; i < healthPickups.size(); i++) {
+		SDL_RenderCopyF(renderer, meatT, 0, &healthPickups[i].r);
 	}
 	SDL_RenderCopyF(renderer, coinsT, 0, &moneyR);
 	moneyText.draw(renderer);
