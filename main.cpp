@@ -53,7 +53,7 @@ const std::string pauseLabels[PAUSE_NUM_OPTIONS] = {
     "Return to Main Menu", 
     "Quit to Desktop" 
 };
-const MenuOption menuTypes[PAUSE_NUM_OPTIONS] = { 
+const MenuOption pauseMenuTypes[PAUSE_NUM_OPTIONS] = { 
     MenuOption::Resume, 
     MenuOption::Controls, 
     MenuOption::Highscores, 
@@ -63,9 +63,25 @@ const MenuOption menuTypes[PAUSE_NUM_OPTIONS] = {
 Text pauseTitleText;
 SDL_FRect pauseContainer;
 SDL_FRect uiSelector;
-float longestWidth;
+float pauseLabelLargest;
 bool pausing = false;
 bool pauseKeyHeld = false;
+MenuButton gameOverOptions[GAMEOVER_NUM_OPTIONS];
+const std::string gameOverLabels[GAMEOVER_NUM_OPTIONS] = {
+    "Play Again",  
+    "Highscore - TBC", 
+    "Return to Main Menu"
+};
+const MenuOption gameOverMenuTypes[GAMEOVER_NUM_OPTIONS] = {
+    MenuOption::Restart,  
+    MenuOption::Highscores, 
+    MenuOption::Main
+};
+Text gameOverTitleText;
+SDL_FRect gameOverContainer;
+float gameOverLargest;
+bool gameOver = false;
+bool restart = false;
 float playerHealth;
 
 
@@ -105,6 +121,10 @@ void RenderPauseMenu(TTF_Font* font);
 
 void PauseInit(TTF_Font* font);
 
+void RenderGameOverMenu(TTF_Font* font);
+
+void GameOverInit(TTF_Font* font);
+
 void HandleMenuOption(MenuOption option);
 
 
@@ -122,7 +142,7 @@ void mainLoop()
 	while (SDL_PollEvent(&event)) {
 		InputEvents(event);
 	}
-	if (!buying && !pausing) {
+	if (!buying && !pausing && !gameOver) {
 		player.dx = 0;
 		player.dy = 0;
 		if (keys[SDL_SCANCODE_A]) {
@@ -231,6 +251,11 @@ void mainLoop()
             }
         }
     }
+
+    if (player.GetHealth() <= 0 && !gameOver) {
+        gameOver = true;
+        pauseMosPos = mousePos;
+    }
     RenderAll();
 }
 
@@ -262,6 +287,8 @@ void GlobalsInit() {
     portalRects.clear();
     pausing = false;
     pauseKeyHeld = false;
+    gameOver = false;
+    restart = false;
 }
 
 int main(int argc, char* argv[])
@@ -273,16 +300,25 @@ int main(int argc, char* argv[])
     player.r.h = 32;
     playerHealth = player.GetHealth();
 
+    uiSelector.w = 32;
+    uiSelector.h = 32;
+
     UiInit();
     PauseInit(robotoF);
+    GameOverInit(robotoF);
     
 
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(mainLoop, 0, 1);
 #else
     while (appRunning) {
-        MenuOption buttonType = DisplayMainMenu(robotoF);
-        HandleMenuOption(buttonType);
+        if (!restart) {
+            MenuOption buttonType = DisplayMainMenu(robotoF);
+            HandleMenuOption(buttonType);
+        }
+        else {
+            gameRunning = true;
+        }
 
         GlobalsInit();
         ClocksInit();
@@ -412,6 +448,7 @@ void WindowInit()
     SDL_GetWindowSize(window, &w, &h);
     SDL_RenderSetScale(renderer, w / (float)windowWidth, h / (float)windowHeight);
     SDL_AddEventWatch(eventWatch, 0);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 }
 
 void BounceOff(Entity* a, Entity* b, bool affectB)
@@ -453,9 +490,10 @@ void InputEvents(const SDL_Event& event)
         SDL_RenderSetScale(renderer, event.window.data1 / (float)windowWidth, event.window.data2 / (float)windowHeight);
     }
     if (event.type == SDL_KEYDOWN) {
-        if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE && !pauseKeyHeld) {
+        if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE && !pauseKeyHeld && !gameOver) {
             pausing = !pausing;
             pauseKeyHeld = true;
+            pauseMosPos = mousePos;
         }
         keys[event.key.keysym.scancode] = true;
     }
@@ -467,7 +505,16 @@ void InputEvents(const SDL_Event& event)
     }
     if (event.type == SDL_MOUSEBUTTONDOWN) {
         buttons[event.button.button] = true;
-        if (pausing) {
+        if (gameOver) {
+            buttons[event.button.button] = false;
+            // Game is over, so you can only interact with the menu on button clicks
+            for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
+                if (SDL_PointInFRect(&mousePos, &gameOverOptions[i].buttonText.dstR)) {
+                    HandleMenuOption(gameOverOptions[i].menuType);
+                }
+            }
+        }
+        else if (pausing) {
             buttons[event.button.button] = false;
             // Game is paused, so you can only interact with the menu on button clicks
             for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
@@ -503,6 +550,16 @@ void InputEvents(const SDL_Event& event)
         mousePos.y = event.motion.y / scaleY;
         realMousePos.x = event.motion.x;
         realMousePos.y = event.motion.y;
+        if (gameOver) {
+            for (int i = 0; i < GAMEOVER_NUM_OPTIONS; ++i) {
+                if (SDL_PointInFRect(&mousePos, &gameOverOptions[i].buttonText.dstR)) {
+                    gameOverOptions[i].selected = true;
+                }
+                else {
+                    gameOverOptions[i].selected = false;
+                }
+            }
+        }
         if (pausing) {
             // Game is paused, so you can only interact with the menu buttons
             for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
@@ -760,8 +817,13 @@ void RenderAll()
         SDL_RenderCopyF(renderer, shieldT, 0, &player.r);
         shieldHealthText.draw(renderer);
     }
-    RotateEntityTowards(playerT, player, mousePos, renderer);
-    //SDL_RenderCopyF(renderer, playerT, 0, &player.r);
+    if (pausing || gameOver) {
+        RotateEntityTowards(playerT, player, pauseMosPos, renderer);
+    }
+    else {
+        RotateEntityTowards(playerT, player, mousePos, renderer);
+        //SDL_RenderCopyF(renderer, playerT, 0, &player.r);
+    }
 
     //Render bullets
     for (int i = 0; i < bullets.size(); ++i) {
@@ -827,6 +889,10 @@ void RenderAll()
         RenderPauseMenu(robotoF);
     }
 
+    if (gameOver) {
+        RenderGameOverMenu(robotoF);
+    }
+
 	SDL_RenderPresent(renderer);
 }
 
@@ -867,7 +933,7 @@ MenuOption DisplayMainMenu(TTF_Font* font)
     SDL_Color color[2] = { { 255, 255, 255 }, { 255, 0, 0 } };
 
     // Setup background and title
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
 
     Text titleText;
     titleText.dstR.w = windowWidth - 100;
@@ -953,14 +1019,14 @@ MenuOption DisplayMainMenu(TTF_Font* font)
 }
 
 void RenderPauseMenu(TTF_Font* font) {
-    SDL_SetRenderDrawColor(renderer, 20, 20, 30, 0);
+    SDL_SetRenderDrawColor(renderer, 20, 20, 30, 200);
     SDL_RenderFillRectF(renderer, &pauseContainer);
     pauseTitleText.draw(renderer);
 
     for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
         if (pauseOptions[i].selected) {
             pauseOptions[i].buttonText.setText(renderer, font, pauseOptions[i].label, PAUSE_SELECTED);
-            uiSelector.x = windowWidth / 2.0f - longestWidth / 2.0f - uiSelector.w - POINTER_OFFSET;
+            uiSelector.x = windowWidth / 2.0f - pauseLabelLargest / 2.0f - uiSelector.w - POINTER_OFFSET;
             uiSelector.y = pauseOptions[i].buttonText.dstR.y;
             SDL_RenderCopyF(renderer, uiSelectedT, 0, &uiSelector);
         }
@@ -986,30 +1052,83 @@ void PauseInit(TTF_Font* font) {
     pauseTitleText.dstR.y = pauseTitleText.dstR.h / 2.0f;
     pauseTitleText.setText(renderer, font, "Paused", PAUSE_MENU_COLOR);
 
-    longestWidth = 0.0f;
+    pauseLabelLargest = 0.0f;
     // Setup buttons
     for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
         pauseOptions[i].label = pauseLabels[i];
-        pauseOptions[i].menuType = menuTypes[i];
+        pauseOptions[i].menuType = pauseMenuTypes[i];
         pauseOptions[i].selected = false;
         pauseOptions[i].buttonText.dstR.w = strlen(pauseOptions[i].label.c_str()) * LETTER_WIDTH;
-        pauseOptions[i].buttonText.dstR.h = 40;
+        pauseOptions[i].buttonText.dstR.h = 50;
         CalculateButtonPosition(&pauseOptions[i].buttonText.dstR, i, PAUSE_NUM_OPTIONS, windowWidth, windowHeight, PAUSE_MENU_BUTTON_PADDING);
         pauseOptions[i].buttonText.dstR.y += pauseTitleText.dstR.h;
         pauseOptions[i].buttonText.setText(renderer, font, pauseOptions[i].label, PAUSE_UNSELECTED);
 
-        longestWidth = std::max(longestWidth, pauseOptions[i].buttonText.dstR.w);;
+        pauseLabelLargest = std::max(pauseLabelLargest, pauseOptions[i].buttonText.dstR.w);;
+    }
+}
+
+void RenderGameOverMenu(TTF_Font* font) {
+    SDL_SetRenderDrawColor(renderer, 60, 60, 60, 150);
+    SDL_RenderFillRectF(renderer, &gameOverContainer);
+    gameOverTitleText.draw(renderer);
+
+    for (int i = 0; i < GAMEOVER_NUM_OPTIONS; ++i) {
+        if (gameOverOptions[i].selected) {
+            gameOverOptions[i].buttonText.setText(renderer, font, gameOverOptions[i].label, GAMEOVER_SELECTED);
+            uiSelector.x = windowWidth / 2.0f - gameOverLargest / 2.0f - uiSelector.w - POINTER_OFFSET;
+            uiSelector.y = gameOverOptions[i].buttonText.dstR.y;
+            SDL_RenderCopyF(renderer, uiSelectedT, 0, &uiSelector);
+        }
+        else {
+            gameOverOptions[i].buttonText.setText(renderer, font, gameOverOptions[i].label, GAMEOVER_UNSELECTED);
+        }
+
+        gameOverOptions[i].buttonText.draw(renderer);
+
+    }
+}
+
+void GameOverInit(TTF_Font* font) {
+    // Setup background and title
+    gameOverContainer.w = windowWidth;
+    gameOverContainer.h = windowHeight;
+    gameOverContainer.x = 0;
+    gameOverContainer.y = 0;
+
+    gameOverTitleText.dstR.w = gameOverContainer.w - 300;
+    gameOverTitleText.dstR.h = 100;
+    gameOverTitleText.dstR.x = windowWidth / 2.0f - gameOverTitleText.dstR.w / 2.0f;
+    gameOverTitleText.dstR.h = gameOverTitleText.dstR.h / 2.0f + 100;
+    gameOverTitleText.setText(renderer, font, "GAME OVER", GAMEOVER_MENU_COLOR);
+
+    gameOverLargest = 0.0f;
+    // Setup buttons
+    for (int i = 0; i < GAMEOVER_NUM_OPTIONS; ++i) {
+        gameOverOptions[i].label = gameOverLabels[i];
+        gameOverOptions[i].menuType = gameOverMenuTypes[i];
+        gameOverOptions[i].selected = false;
+        gameOverOptions[i].buttonText.dstR.w = strlen(gameOverOptions[i].label.c_str()) * LETTER_WIDTH;
+        gameOverOptions[i].buttonText.dstR.h = 50;
+        CalculateButtonPosition(&gameOverOptions[i].buttonText.dstR, i, GAMEOVER_NUM_OPTIONS, windowWidth, windowHeight, GAMEOVER_MENU_BUTTON_PADDING);
+        gameOverOptions[i].buttonText.dstR.y += gameOverTitleText.dstR.h;
+        gameOverOptions[i].buttonText.setText(renderer, font, gameOverOptions[i].label, GAMEOVER_UNSELECTED);
+
+        gameOverLargest = std::max(gameOverLargest, gameOverOptions[i].buttonText.dstR.w);;
     }
 
     // Setup pointer by selected button.
-    uiSelector.w = 32;
-    uiSelector.h = 32; 
+    
 }
 
 void HandleMenuOption(MenuOption option) {
     switch (option) {
         case MenuOption::Play:
             gameRunning = true;
+            break;
+        case MenuOption::Restart:
+            restart = true;
+            gameRunning = false;
             break;
         case MenuOption::Resume:
             pausing = false;
@@ -1023,6 +1142,7 @@ void HandleMenuOption(MenuOption option) {
             break;
         case MenuOption::Main:
             gameRunning = false;
+            restart = false;
             break;
         case MenuOption::Quit:
             gameRunning = false;

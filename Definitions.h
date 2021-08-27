@@ -93,6 +93,7 @@ int windowHeight = 720;
 
 SDL_Point mousePos;
 SDL_Point realMousePos;
+SDL_Point pauseMosPos;
 bool keys[SDL_NUM_SCANCODES];
 bool buttons[SDL_BUTTON_X2 + 1];
 TTF_Font* robotoF;
