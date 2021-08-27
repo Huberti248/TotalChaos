@@ -55,6 +55,7 @@ using namespace std::chrono_literals;
 #include "Enemy.h"
 #include "Bullet.h"
 #include "Clock.h"
+#include "Crypto.h"
 
 // NOTE: Remember to uncomment it on every release
 //#define RELEASE
@@ -99,4 +100,4 @@ bool buttons[SDL_BUTTON_X2 + 1];
 TTF_Font* robotoF;
 bool gameRunning = true;
 bool appRunning = true;
-
+std::string ek = "q1YZbqq48XNeV77Egwtk";
