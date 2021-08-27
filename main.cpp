@@ -266,6 +266,13 @@ void GlobalsInit() {
 
 int main(int argc, char* argv[])
 {
+    
+    std::string enc = Crypto::Encrypt("Hello there", ek);
+    std::cout << enc << std::endl;
+
+    std::string dec = Crypto::Decrypt(enc, ek);
+    std::cout << dec << std::endl;
+
     WindowInit();
     TexturesInit();
 
