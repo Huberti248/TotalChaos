@@ -276,7 +276,7 @@ void UiInit()
     shieldHealthText.dstR.x = windowWidth / 3 - shieldPriceText.dstR.w / 3;
     shieldHealthText.dstR.y = 0;
     std::string sText = "Shield: " + std::to_string(shieldHealth);
-    shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
+    shieldHealthText.setText(renderer, robotoF, sText, { 255, 255, 255 });
 
     shieldPriceText.setText(renderer, robotoF, "50");
     shieldPriceText.dstR.w = 100;
