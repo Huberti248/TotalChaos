@@ -45,8 +45,33 @@ SDL_FRect closeBtnR;
 int healthSpawnTime = 0;
 std::vector<SDL_FRect> portalRects;
 Clock portalClock;
+MenuButton pauseOptions[PAUSE_NUM_OPTIONS];
+const std::string pauseLabels[PAUSE_NUM_OPTIONS] = { 
+    "Resume", 
+    "Controls - TBC", 
+    "Highscore - TBC", 
+    "Return to Main Menu", 
+    "Quit to Desktop" 
+};
+const MenuOption menuTypes[PAUSE_NUM_OPTIONS] = { 
+    MenuOption::Resume, 
+    MenuOption::Controls, 
+    MenuOption::Highscores, 
+    MenuOption::Main, 
+    MenuOption::Quit 
+};
+Text pauseTitleText;
+SDL_FRect pauseContainer;
+SDL_FRect uiSelector;
+float longestWidth;
+bool pausing = false;
+bool pauseKeyHeld = false;
+float playerHealth;
+
 
 void WindowInit();
+
+void GlobalsInit();
 
 void mainLoop();
 
@@ -57,8 +82,6 @@ void UiInit();
 void ClocksInit();
 
 void BounceOff(Entity* a, Entity* b, bool affectB);
-
-MenuName displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Point* mousePosMenu);
 
 void InputEvents(const SDL_Event& event);
 
@@ -76,6 +99,14 @@ void RenderAll();
 
 void FireWhenReady();
 
+MenuOption DisplayMainMenu(TTF_Font* font);
+
+void RenderPauseMenu(TTF_Font* font);
+
+void PauseInit(TTF_Font* font);
+
+void HandleMenuOption(MenuOption option);
+
 
 void mainLoop()
 {
@@ -91,7 +122,7 @@ void mainLoop()
 	while (SDL_PollEvent(&event)) {
 		InputEvents(event);
 	}
-	if (!buying) {
+	if (!buying && !pausing) {
 		player.dx = 0;
 		player.dy = 0;
 		if (keys[SDL_SCANCODE_A]) {
@@ -203,6 +234,36 @@ void mainLoop()
     RenderAll();
 }
 
+void GlobalsInit() {
+    player.dx = 0;
+    player.dy = 0;
+    player.ghostBullet = false;
+    player.hasBomb = false;
+    player.streak = 0;
+    player.r.x = windowWidth / 2 - player.r.w / 2;
+    player.r.y = windowHeight / 2 - player.r.h / 2;
+    player.SetHealth(playerHealth);
+
+    bullets.clear();
+    enemies.clear();
+    killPointsText.setText(renderer, robotoF, "0");
+    healthText.setText(renderer, robotoF, playerHealth, { 255, 0, 0 });
+    planets.clear();
+    healthPickups.clear();
+    bombs.clear();
+    buying = false;
+
+    std::string sText = "Shield: " + std::to_string(shieldHealth);
+    shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
+
+    moneyText.setText(renderer, robotoF, 0);
+    hasShield = false;
+    healthSpawnTime = 0;
+    portalRects.clear();
+    pausing = false;
+    pauseKeyHeld = false;
+}
+
 int main(int argc, char* argv[])
 {
     WindowInit();
@@ -210,21 +271,25 @@ int main(int argc, char* argv[])
 
     player.r.w = 32;
     player.r.h = 32;
-    player.r.x = windowWidth / 2 - player.r.w / 2;
-    player.r.y = windowHeight / 2 - player.r.h / 2;
+    playerHealth = player.GetHealth();
 
     UiInit();
-    ClocksInit();
+    PauseInit(robotoF);
+    
 
-    MenuName buttonType = displayMainMenu(renderer, robotoF, &realMousePos);
-    if (buttonType == MenuName::Quit) {
-        running = false;
-    }
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(mainLoop, 0, 1);
 #else
-    while (running) {
-        mainLoop();
+    while (appRunning) {
+        MenuOption buttonType = DisplayMainMenu(robotoF);
+        HandleMenuOption(buttonType);
+
+        GlobalsInit();
+        ClocksInit();
+
+        while (gameRunning) {
+            mainLoop();
+        }
     }
 #endif
     // TODO: On mobile remember to use eventWatch function (it doesn't reach this code when terminating)
@@ -377,131 +442,54 @@ void BounceOff(Entity* a, Entity* b, bool affectB)
     b->dy = directionB.y;
 }
 
-MenuName displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Point* mousePosMenu)
-{
-    const int NUMMENU = 2;
-    MenuButton buttons[NUMMENU];
-    const std::string labels[NUMMENU] = { "Play", "Exit" };
-    const MenuName menuTypes[NUMMENU] = { MenuName::Play, MenuName::Quit };
-    SDL_Color color[2] = { { 255, 255, 255 }, { 255, 0, 0 } };
-
-    // Setup background and title
-    SDL_SetRenderDrawColor(rendererMenu, 0, 0, 0, 1);
-
-    Text titleText;
-    titleText.dstR.w = windowWidth - 100;
-    titleText.dstR.h = 100;
-    titleText.dstR.x = windowWidth / 2.0f - titleText.dstR.w / 2.0f;
-    titleText.dstR.y = titleText.dstR.h / 2.0f;
-    titleText.setText(rendererMenu, fontMenu, "Total Chaos In Space", MAIN_MENU_COLOR);
-
-    // Setup buttons
-    for (int i = 0; i < NUMMENU; ++i) {
-        buttons[i].label = labels[i];
-        buttons[i].menuType = menuTypes[i];
-        buttons[i].selected = false;
-        buttons[i].buttonText.dstR.w = 100;
-        buttons[i].buttonText.dstR.h = 40;
-        CalculateButtonPosition(&buttons[i].buttonText.dstR, i, NUMMENU, windowWidth, windowHeight, MAIN_MENU_BUTTON_PADDING);
-        buttons[i].buttonText.dstR.y += titleText.dstR.h;
-        buttons[i].buttonText.setText(rendererMenu, fontMenu, buttons[i].label, color[0]);
-    }
-
-    // Setup pointer by selected button.
-    SDL_FRect uiSelectedR;
-    uiSelectedR.w = 32;
-    uiSelectedR.h = 32;
-
-    SDL_Event eventMenu;
-    while (true) {
-        SDL_RenderClear(rendererMenu);
-        while (SDL_PollEvent(&eventMenu)) {
-            switch (eventMenu.type) {
-            case SDL_QUIT:
-                return MenuName::Quit;
-            case SDL_WINDOWEVENT:
-                if (eventMenu.window.event == SDL_WINDOWEVENT_RESIZED) {
-                    SDL_RenderSetScale(rendererMenu, eventMenu.window.data1 / (float)windowWidth, eventMenu.window.data2 / (float)windowHeight);
-                }
-                break;
-            case SDL_MOUSEMOTION:
-                mousePosMenu->x = eventMenu.motion.x;
-                mousePosMenu->y = eventMenu.motion.y;
-                for (int i = 0; i < NUMMENU; ++i) {
-                    if (SDL_PointInFRect(mousePosMenu, &buttons[i].buttonText.dstR)) {
-                        if (!buttons[i].selected) {
-                            buttons[i].selected = true;
-                            buttons[i].buttonText.setText(rendererMenu, fontMenu, buttons[i].label, color[1]);
-                        }
-                    }
-                    else {
-                        if (buttons[i].selected) {
-                            buttons[i].selected = false;
-                            buttons[i].buttonText.setText(rendererMenu, fontMenu, buttons[i].label, color[0]);
-                        }
-                    }
-                }
-                break;
-            case SDL_MOUSEBUTTONDOWN:
-                mousePosMenu->x = eventMenu.motion.x;
-                mousePosMenu->y = eventMenu.motion.y;
-                for (int i = 0; i < NUMMENU; ++i) {
-                    if (SDL_PointInFRect(mousePosMenu, &buttons[i].buttonText.dstR)) {
-                        return buttons[i].menuType;
-                    }
-                }
-                break;
-            case SDL_KEYDOWN:
-                if (eventMenu.key.keysym.sym == SDLK_ESCAPE) {
-                    return MenuName::Quit;
-                }
-                break;
-            }
-        }
-
-        titleText.draw(rendererMenu);
-        for (MenuButton button : buttons) {
-            if (button.selected) {
-                uiSelectedR.x = button.buttonText.dstR.x - button.buttonText.dstR.w / 2.0f - uiSelectedR.w / 2.0f;
-                uiSelectedR.y = button.buttonText.dstR.y;
-                SDL_RenderCopyF(rendererMenu, uiSelectedT, 0, &uiSelectedR);
-            }
-            button.buttonText.draw(rendererMenu);
-        }
-
-        SDL_RenderPresent(rendererMenu);
-    }
-}
-
 void InputEvents(const SDL_Event& event)
 {
-    if (event.type == SDL_QUIT || event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
-        running = false;
+    if (event.type == SDL_QUIT) {
+        gameRunning = false;
+        appRunning = false;
         // TODO: On mobile remember to use eventWatch function (it doesn't reach this code when terminating)
     }
     if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED) {
         SDL_RenderSetScale(renderer, event.window.data1 / (float)windowWidth, event.window.data2 / (float)windowHeight);
     }
     if (event.type == SDL_KEYDOWN) {
+        if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE && !pauseKeyHeld) {
+            pausing = !pausing;
+            pauseKeyHeld = true;
+        }
         keys[event.key.keysym.scancode] = true;
     }
     if (event.type == SDL_KEYUP) {
+        if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
+            pauseKeyHeld = false;
+        }
         keys[event.key.keysym.scancode] = false;
     }
     if (event.type == SDL_MOUSEBUTTONDOWN) {
         buttons[event.button.button] = true;
-        if (SDL_PointInFRect(&mousePos, &closeBtnR) && buying) {
-            buying = false;
+        if (pausing) {
+            buttons[event.button.button] = false;
+            // Game is paused, so you can only interact with the menu on button clicks
+            for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
+                if (SDL_PointInFRect(&mousePos, &pauseOptions[i].buttonText.dstR)) {
+                    HandleMenuOption(pauseOptions[i].menuType);
+                }
+            }
         }
-        if (SDL_PointInFRect(&mousePos, &buyBtnR) && buying) {
-            if (std::stoi(moneyText.text) >= std::stoi(shieldPriceText.text)) {
-                hasShield = true;
-                shieldHealth = 10;
+        else {
+            if (SDL_PointInFRect(&mousePos, &closeBtnR) && buying) {
+                buying = false;
+            }
+            if (SDL_PointInFRect(&mousePos, &buyBtnR) && buying) {
+                if (std::stoi(moneyText.text) >= std::stoi(shieldPriceText.text)) {
+                    hasShield = true;
+                    shieldHealth = 10;
 #if _DEBUG
-                std::string sText = "Shield: " + std::to_string(shieldHealth);
-                shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
+                    std::string sText = "Shield: " + std::to_string(shieldHealth);
+                    shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
 #endif
-                moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shieldPriceText.text));
+                    moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shieldPriceText.text));
+                }
             }
         }
     }
@@ -515,6 +503,17 @@ void InputEvents(const SDL_Event& event)
         mousePos.y = event.motion.y / scaleY;
         realMousePos.x = event.motion.x;
         realMousePos.y = event.motion.y;
+        if (pausing) {
+            // Game is paused, so you can only interact with the menu buttons
+            for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
+                if (SDL_PointInFRect(&mousePos, &pauseOptions[i].buttonText.dstR)) {
+                    pauseOptions[i].selected = true;
+                }
+                else {
+                    pauseOptions[i].selected = false;
+                }
+            }
+        }
     }
 }
 
@@ -812,6 +811,7 @@ void RenderAll()
 
 	SDL_RenderCopyF(renderer, coinsT, 0, &moneyR);
 	moneyText.draw(renderer);
+   
 	if (buying) {
 		SDL_SetRenderDrawColor(renderer, 125, 125, 125, 0);
 		SDL_RenderFillRectF(renderer, &buyR);
@@ -822,6 +822,11 @@ void RenderAll()
 		SDL_RenderCopyF(renderer, closeT, 0, &closeBtnR);
 		SDL_RenderCopyF(renderer, coinsT, 0, &shieldPrizeCoinsR);
 	}
+
+    if (pausing) {
+        RenderPauseMenu(robotoF);
+    }
+
 	SDL_RenderPresent(renderer);
 }
 
@@ -851,3 +856,178 @@ void FireWhenReady()
         bulletClock.restart();
     }
 }
+
+#pragma region Menu Functions
+MenuOption DisplayMainMenu(TTF_Font* font)
+{
+    const int NUMMENU = 2;
+    MenuButton buttons[NUMMENU];
+    const std::string labels[NUMMENU] = { "Play", "Exit" };
+    const MenuOption menuTypes[NUMMENU] = { MenuOption::Play, MenuOption::Quit };
+    SDL_Color color[2] = { { 255, 255, 255 }, { 255, 0, 0 } };
+
+    // Setup background and title
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 1);
+
+    Text titleText;
+    titleText.dstR.w = windowWidth - 100;
+    titleText.dstR.h = 100;
+    titleText.dstR.x = windowWidth / 2.0f - titleText.dstR.w / 2.0f;
+    titleText.dstR.y = titleText.dstR.h / 2.0f;
+    titleText.setText(renderer, font, "Total Chaos In Space", MAIN_MENU_COLOR);
+
+    // Setup buttons
+    for (int i = 0; i < NUMMENU; ++i) {
+        buttons[i].label = labels[i];
+        buttons[i].menuType = menuTypes[i];
+        buttons[i].selected = false;
+        buttons[i].buttonText.dstR.w = 100;
+        buttons[i].buttonText.dstR.h = 40;
+        CalculateButtonPosition(&buttons[i].buttonText.dstR, i, NUMMENU, windowWidth, windowHeight, MAIN_MENU_BUTTON_PADDING);
+        buttons[i].buttonText.dstR.y += titleText.dstR.h;
+        buttons[i].buttonText.setText(renderer, font, buttons[i].label, color[0]);
+    }
+
+    // Setup pointer by selected button.
+    SDL_FRect uiSelectedR;
+    uiSelectedR.w = 32;
+    uiSelectedR.h = 32;
+
+    SDL_Event eventMenu;
+    while (true) {
+        SDL_RenderClear(renderer);
+        while (SDL_PollEvent(&eventMenu)) {
+            switch (eventMenu.type) {
+            case SDL_QUIT:
+                return MenuOption::Quit;
+            case SDL_WINDOWEVENT:
+                if (eventMenu.window.event == SDL_WINDOWEVENT_RESIZED) {
+                    SDL_RenderSetScale(renderer, eventMenu.window.data1 / (float)windowWidth, eventMenu.window.data2 / (float)windowHeight);
+                }
+                break;
+            case SDL_MOUSEMOTION:
+                float scaleX, scaleY;
+                SDL_RenderGetScale(renderer, &scaleX, &scaleY);
+                mousePos.x = eventMenu.motion.x / scaleX;
+                mousePos.y = eventMenu.motion.y / scaleY;
+                realMousePos.x = eventMenu.motion.x;
+                realMousePos.y = eventMenu.motion.y;
+
+                for (int i = 0; i < NUMMENU; ++i) {
+                    if (SDL_PointInFRect(&mousePos, &buttons[i].buttonText.dstR)) {
+                        if (!buttons[i].selected) {
+                            buttons[i].selected = true;
+                            buttons[i].buttonText.setText(renderer, font, buttons[i].label, color[1]);
+                        }
+                    }
+                    else {
+                        if (buttons[i].selected) {
+                            buttons[i].selected = false;
+                            buttons[i].buttonText.setText(renderer, font, buttons[i].label, color[0]);
+                        }
+                    }
+                }
+                break;
+            case SDL_MOUSEBUTTONDOWN:
+                for (int i = 0; i < NUMMENU; ++i) {
+                    if (SDL_PointInFRect(&mousePos, &buttons[i].buttonText.dstR)) {
+                        return buttons[i].menuType;
+                    }
+                }
+                break;
+            }
+        }
+
+        titleText.draw(renderer);
+        for (MenuButton button : buttons) {
+            if (button.selected) {
+                uiSelectedR.x = button.buttonText.dstR.x - button.buttonText.dstR.w / 2.0f - uiSelectedR.w / 2.0f;
+                uiSelectedR.y = button.buttonText.dstR.y;
+                SDL_RenderCopyF(renderer, uiSelectedT, 0, &uiSelectedR);
+            }
+            button.buttonText.draw(renderer);
+        }
+
+        SDL_RenderPresent(renderer);
+    }
+}
+
+void RenderPauseMenu(TTF_Font* font) {
+    SDL_SetRenderDrawColor(renderer, 20, 20, 30, 0);
+    SDL_RenderFillRectF(renderer, &pauseContainer);
+    pauseTitleText.draw(renderer);
+
+    for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
+        if (pauseOptions[i].selected) {
+            pauseOptions[i].buttonText.setText(renderer, font, pauseOptions[i].label, PAUSE_SELECTED);
+            uiSelector.x = windowWidth / 2.0f - longestWidth / 2.0f - uiSelector.w - POINTER_OFFSET;
+            uiSelector.y = pauseOptions[i].buttonText.dstR.y;
+            SDL_RenderCopyF(renderer, uiSelectedT, 0, &uiSelector);
+        }
+        else {
+            pauseOptions[i].buttonText.setText(renderer, font, pauseOptions[i].label, PAUSE_UNSELECTED);
+        }
+
+        pauseOptions[i].buttonText.draw(renderer);
+
+    }
+}
+
+void PauseInit(TTF_Font* font) {
+    // Setup background and title
+    pauseContainer.w = windowWidth / 2.0f - 75;
+    pauseContainer.h = windowHeight;
+    pauseContainer.x = windowWidth / 2.0f - pauseContainer.w / 2.0f;
+    pauseContainer.y = 0;
+
+    pauseTitleText.dstR.w = pauseContainer.w - 100;
+    pauseTitleText.dstR.h = 100;
+    pauseTitleText.dstR.x = windowWidth / 2.0f - pauseTitleText.dstR.w / 2.0f;
+    pauseTitleText.dstR.y = pauseTitleText.dstR.h / 2.0f;
+    pauseTitleText.setText(renderer, font, "Paused", PAUSE_MENU_COLOR);
+
+    longestWidth = 0.0f;
+    // Setup buttons
+    for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
+        pauseOptions[i].label = pauseLabels[i];
+        pauseOptions[i].menuType = menuTypes[i];
+        pauseOptions[i].selected = false;
+        pauseOptions[i].buttonText.dstR.w = strlen(pauseOptions[i].label.c_str()) * LETTER_WIDTH;
+        pauseOptions[i].buttonText.dstR.h = 40;
+        CalculateButtonPosition(&pauseOptions[i].buttonText.dstR, i, PAUSE_NUM_OPTIONS, windowWidth, windowHeight, PAUSE_MENU_BUTTON_PADDING);
+        pauseOptions[i].buttonText.dstR.y += pauseTitleText.dstR.h;
+        pauseOptions[i].buttonText.setText(renderer, font, pauseOptions[i].label, PAUSE_UNSELECTED);
+
+        longestWidth = std::max(longestWidth, pauseOptions[i].buttonText.dstR.w);;
+    }
+
+    // Setup pointer by selected button.
+    uiSelector.w = 32;
+    uiSelector.h = 32; 
+}
+
+void HandleMenuOption(MenuOption option) {
+    switch (option) {
+        case MenuOption::Play:
+            gameRunning = true;
+            break;
+        case MenuOption::Resume:
+            pausing = false;
+            pauseKeyHeld = false;
+            break;
+        case MenuOption::Controls:
+            gameRunning = false;
+            break;
+        case MenuOption::Highscores:
+            gameRunning = false;
+            break;
+        case MenuOption::Main:
+            gameRunning = false;
+            break;
+        case MenuOption::Quit:
+            gameRunning = false;
+            appRunning = false;
+            break;
+    }
+}
+#pragma endregion
