@@ -96,5 +96,6 @@ SDL_Point realMousePos;
 bool keys[SDL_NUM_SCANCODES];
 bool buttons[SDL_BUTTON_X2 + 1];
 TTF_Font* robotoF;
-bool running = true;
+bool gameRunning = true;
+bool appRunning = true;
 
