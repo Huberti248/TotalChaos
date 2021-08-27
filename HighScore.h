@@ -16,5 +16,5 @@ public:
 	static void ReadScores(std::tuple<int, const char*>** scorePairsRef);
 
 private:
-
+	static std::string Split(const std::string& str, char del);
 };

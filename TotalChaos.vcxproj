@@ -98,6 +98,7 @@
     <ClCompile Include="Crypto.cpp" />
     <ClCompile Include="Enemy.cpp" />
     <ClCompile Include="Entity.cpp" />
+    <ClCompile Include="HighScore.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MathUtils.cpp" />
     <ClCompile Include="Menu.cpp" />
@@ -111,6 +112,7 @@
     <ClInclude Include="Crypto.h" />
     <ClInclude Include="Definitions.h" />
     <ClInclude Include="Enemy.h" />
+    <ClInclude Include="HighScore.h" />
     <ClInclude Include="Menu.h" />
     <ClInclude Include="SdlDefinitions.h" />
     <ClInclude Include="SpawnPlace.h" />
