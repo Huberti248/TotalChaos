@@ -11,7 +11,7 @@ void Enemy::Combat(SDL_Texture* enemyTexture, std::vector<Bullet>* bulletListRef
 	
 	//Rotate towards the player
 	//RotateEntityTowards(enemyTexture, *this, playerPos, renderer);
-	//audioManager->PlaySFX(SFXAudio::EnemyFire);
+	audioManager->PlaySFX(SFXAudio::EnemyFire);
 	//Create a bullet with the appropriate target
 	Bullet toShoot = Bullet(TargetMask::PlayerMask);
 	toShoot.r.w = 32;
