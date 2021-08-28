@@ -4,6 +4,8 @@
 enum class State {
 	Gameplay,
 	Credits,
+	Controls,
+	Main
 };
 
 Player player;
@@ -55,7 +57,6 @@ SDL_FRect closeBtnR;
 int healthSpawnTime = 0;
 std::vector<SDL_FRect> portalRects;
 Clock portalClock;
-bool menuRunning = false;
 MenuButton pauseOptions[PAUSE_NUM_OPTIONS];
 const std::string pauseLabels[PAUSE_NUM_OPTIONS] = { 
 	"Resume", 
@@ -93,7 +94,6 @@ MenuOption controlsMenuType = MenuOption::Main;
 Text controlsTitleText;
 SDL_FRect controlsTitleContainer;
 SDL_FRect controlsOptionContainer;
-bool controlsMenu = false;
 float playerHealth;
 AudioManager* audioManager = AudioManager::Instance();
 Text shotgunPriceText;
@@ -147,6 +147,8 @@ void RenderGameOverMenu(TTF_Font* font);
 void GameOverInit(TTF_Font* titleFont, TTF_Font* font);
 
 void RenderControlsMenu(TTF_Font* font);
+
+void RenderCreditsMenu(TTF_Font* font);
 
 void ControlsInit(TTF_Font* titleFont, TTF_Font* font);
 
@@ -289,11 +291,14 @@ void mainLoop()
 		}
 		RenderAll();
 	}
-	else if (state == State::Credits) {
+	else {
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
-			if (event.type == SDL_QUIT || event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
+			if (event.type == SDL_QUIT || event.type == SDL_KEYDOWN) {
 				gameRunning = false;
+				if (event.type == SDL_QUIT) {
+					appRunning = false;
+				}
 				// TODO: On mobile remember to use eventWatch function (it doesn't reach this code when terminating)
 			}
 			if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED) {
@@ -307,6 +312,16 @@ void mainLoop()
 			}
 			if (event.type == SDL_MOUSEBUTTONDOWN) {
 				buttons[event.button.button] = true;
+				if ((state == State::Controls) || (state == State::Credits)) {
+					if (SDL_PointInFRect(&mousePos, &controlsOptions.buttonText.dstR)) {
+						audioManager->PlaySFX(SFXAudio::UISuccess);
+						state = State::Main;
+						HandleMenuOption(controlsOptions.menuType);
+					}
+					else {
+						audioManager->PlaySFX(SFXAudio::UIFail);
+					}
+				}
 			}
 			if (event.type == SDL_MOUSEBUTTONUP) {
 				buttons[event.button.button] = false;
@@ -318,62 +333,26 @@ void mainLoop()
 				mousePos.y = event.motion.y / scaleY;
 				realMousePos.x = event.motion.x;
 				realMousePos.y = event.motion.y;
+
+				if ((state == State::Controls) || (state == State::Credits)) {
+					if (SDL_PointInFRect(&mousePos, &controlsOptions.buttonText.dstR)) {
+						controlsOptions.selected = true;
+					}
+					else {
+						controlsOptions.selected = false;
+					}
+				}
 			}
 		}
+
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 		SDL_RenderClear(renderer);
-		Text authorsText;
-		authorsText.dstR.w = 140;
-		authorsText.dstR.h = 40;
-		authorsText.dstR.x = windowWidth / 2 - authorsText.dstR.w / 2;
-		authorsText.dstR.y = 0;
-		authorsText.setText(renderer, robotoF, "Game authors:");
-		authorsText.draw(renderer);
-		std::vector<Text> authors;
-		authors.push_back(Text());
-		authors.back().setText(renderer, robotoF, "Huberti");
-		authors.back().dstR.w = 100;
-		authors.back().dstR.h = 40;
-		authors.back().dstR.x = windowWidth / 2 - authors.back().dstR.w / 2;
-		authors.back().dstR.y = authorsText.dstR.y + authorsText.dstR.h;
-		authors.push_back(authors.back());
-		authors.back().setText(renderer, robotoF, "Kyn21kx");
-		authors.back().dstR.y = authors[authors.size() - 2].dstR.y + authors[authors.size() - 2].dstR.h;
-		authors.push_back(authors.back());
-		authors.back().setText(renderer, robotoF, "ajyang2000");
-		authors.back().dstR.y = authors[authors.size() - 2].dstR.y + authors[authors.size() - 2].dstR.h;
-		authors.push_back(authors.back());
-		authors.back().setText(renderer, robotoF, "Altimerra");
-		authors.back().dstR.y = authors[authors.size() - 2].dstR.y + authors[authors.size() - 2].dstR.h;
-		authors.push_back(authors.back());
-		authors.back().setText(renderer, robotoF, "MalgorzataMika");
-		authors.back().dstR.w = 140;
-		authors.back().dstR.y = authors[authors.size() - 2].dstR.y + authors[authors.size() - 2].dstR.h;
-		Text externalGraphicsText;
-		externalGraphicsText.setText(renderer, robotoF, "External graphics:");
-		externalGraphicsText.dstR.w = 140;
-		externalGraphicsText.dstR.h = 40;
-		externalGraphicsText.dstR.x = windowWidth / 2 - externalGraphicsText.dstR.w / 2;
-		externalGraphicsText.dstR.y = authors.back().dstR.y + authors.back().dstR.h;
-		externalGraphicsText.draw(renderer);
-		std::vector<Text> egAuthorsTexts;
-		egAuthorsTexts.push_back(Text());
-		egAuthorsTexts.back().setText(renderer, robotoF, "Gumichan01");
-		egAuthorsTexts.back().dstR.w = 100;
-		egAuthorsTexts.back().dstR.h = 40;
-		egAuthorsTexts.back().dstR.x = windowWidth / 2 - egAuthorsTexts.back().dstR.w / 2;
-		egAuthorsTexts.back().dstR.y = externalGraphicsText.dstR.y + externalGraphicsText.dstR.h;
-		egAuthorsTexts.push_back(egAuthorsTexts.back());
-		egAuthorsTexts.back().setText(renderer, robotoF, "Skorpio");
-		egAuthorsTexts.back().dstR.y = egAuthorsTexts[egAuthorsTexts.size() - 2].dstR.y + egAuthorsTexts[egAuthorsTexts.size() - 2].dstR.h;
-		egAuthorsTexts.push_back(egAuthorsTexts.back());
-		egAuthorsTexts.back().setText(renderer, robotoF, "Freepik");
-		egAuthorsTexts.back().dstR.y = egAuthorsTexts[egAuthorsTexts.size() - 2].dstR.y + egAuthorsTexts[egAuthorsTexts.size() - 2].dstR.h;
-		for (int i = 0; i < authors.size(); ++i) {
-			authors[i].draw(renderer);
+
+		if (state == State::Controls) {
+			RenderControlsMenu(robotoF);
 		}
-		for (int i = 0; i < egAuthorsTexts.size(); ++i) {
-			egAuthorsTexts[i].draw(renderer);
+		else if (state == State::Credits) {
+			RenderCreditsMenu(robotoF);
 		}
 		SDL_RenderPresent(renderer);
 	}
@@ -445,18 +424,11 @@ int main(int argc, char* argv[])
 			gameRunning = true;
 		}
 
-		if (menuRunning) {
-			while (menuRunning) {
-				menuMainLoop();
-			}
-		}
-		else {
 			GlobalsInit();
 			ClocksInit();
 
-			while (gameRunning) {
-				mainLoop();
-			}
+		while (gameRunning) {
+			mainLoop();
 		}
 	}
 #endif
@@ -1122,9 +1094,6 @@ void RenderAll()
 	if (gameOver) {
 		RenderGameOverMenu(robotoF);
 	}
-	if (controlsMenu) {
-		RenderControlsMenu(robotoF);
-	}
 
 	SDL_RenderPresent(renderer);
 }
@@ -1394,6 +1363,74 @@ void RenderControlsMenu(TTF_Font* font) {
 	controlsOptions.buttonText.draw(renderer);
 }
 
+void RenderCreditsMenu(TTF_Font* font) {
+	Text authorsText;
+	authorsText.dstR.w = 140;
+	authorsText.dstR.h = 40;
+	authorsText.dstR.x = windowWidth / 2 - authorsText.dstR.w / 2;
+	authorsText.dstR.y = 0;
+	authorsText.setText(renderer, robotoF, "Game authors:");
+	authorsText.draw(renderer);
+	std::vector<Text> authors;
+	authors.push_back(Text());
+	authors.back().setText(renderer, robotoF, "Huberti");
+	authors.back().dstR.w = 100;
+	authors.back().dstR.h = 40;
+	authors.back().dstR.x = windowWidth / 2 - authors.back().dstR.w / 2;
+	authors.back().dstR.y = authorsText.dstR.y + authorsText.dstR.h;
+	authors.push_back(authors.back());
+	authors.back().setText(renderer, robotoF, "Kyn21kx");
+	authors.back().dstR.y = authors[authors.size() - 2].dstR.y + authors[authors.size() - 2].dstR.h;
+	authors.push_back(authors.back());
+	authors.back().setText(renderer, robotoF, "ajyang2000");
+	authors.back().dstR.y = authors[authors.size() - 2].dstR.y + authors[authors.size() - 2].dstR.h;
+	authors.push_back(authors.back());
+	authors.back().setText(renderer, robotoF, "Altimerra");
+	authors.back().dstR.y = authors[authors.size() - 2].dstR.y + authors[authors.size() - 2].dstR.h;
+	authors.push_back(authors.back());
+	authors.back().setText(renderer, robotoF, "MalgorzataMika");
+	authors.back().dstR.w = 140;
+	authors.back().dstR.y = authors[authors.size() - 2].dstR.y + authors[authors.size() - 2].dstR.h;
+	Text externalGraphicsText;
+	externalGraphicsText.setText(renderer, robotoF, "External graphics:");
+	externalGraphicsText.dstR.w = 140;
+	externalGraphicsText.dstR.h = 40;
+	externalGraphicsText.dstR.x = windowWidth / 2 - externalGraphicsText.dstR.w / 2;
+	externalGraphicsText.dstR.y = authors.back().dstR.y + authors.back().dstR.h;
+	externalGraphicsText.draw(renderer);
+	std::vector<Text> egAuthorsTexts;
+	egAuthorsTexts.push_back(Text());
+	egAuthorsTexts.back().setText(renderer, robotoF, "Gumichan01");
+	egAuthorsTexts.back().dstR.w = 100;
+	egAuthorsTexts.back().dstR.h = 40;
+	egAuthorsTexts.back().dstR.x = windowWidth / 2 - egAuthorsTexts.back().dstR.w / 2;
+	egAuthorsTexts.back().dstR.y = externalGraphicsText.dstR.y + externalGraphicsText.dstR.h;
+	egAuthorsTexts.push_back(egAuthorsTexts.back());
+	egAuthorsTexts.back().setText(renderer, robotoF, "Skorpio");
+	egAuthorsTexts.back().dstR.y = egAuthorsTexts[egAuthorsTexts.size() - 2].dstR.y + egAuthorsTexts[egAuthorsTexts.size() - 2].dstR.h;
+	egAuthorsTexts.push_back(egAuthorsTexts.back());
+	egAuthorsTexts.back().setText(renderer, robotoF, "Freepik");
+	egAuthorsTexts.back().dstR.y = egAuthorsTexts[egAuthorsTexts.size() - 2].dstR.y + egAuthorsTexts[egAuthorsTexts.size() - 2].dstR.h;
+	for (int i = 0; i < authors.size(); ++i) {
+		authors[i].draw(renderer);
+	}
+	for (int i = 0; i < egAuthorsTexts.size(); ++i) {
+		egAuthorsTexts[i].draw(renderer);
+	}
+
+	SDL_SetRenderDrawColor(renderer, 60, 60, 60, SDL_ALPHA_OPAQUE);
+	SDL_RenderFillRectF(renderer, &controlsOptionContainer);
+
+	if (controlsOptions.selected) {
+		controlsOptions.buttonText.setText(renderer, font, controlsOptions.label, BUTTON_SELECTED);
+	}
+	else {
+		controlsOptions.buttonText.setText(renderer, font, controlsOptions.label, BUTTON_UNSELECTED);
+	}
+
+	controlsOptions.buttonText.draw(renderer);
+}
+
 void ControlsInit(TTF_Font* titleFont, TTF_Font* font) {
 	// Setup background and title
 	controlsTitleContainer.w = 500;
@@ -1447,9 +1484,8 @@ void HandleMenuOption(MenuOption option)
 			audioManager->ResumeMusic();
 			break;
 		case MenuOption::Controls:
-			gameRunning = false;
-			controlsMenu = true;
-			menuRunning = true;
+			gameRunning = true;
+			state = State::Controls;
 			break;
 		case MenuOption::Highscores:
 			gameRunning = false;
@@ -1457,69 +1493,15 @@ void HandleMenuOption(MenuOption option)
 		case MenuOption::Main:
 			gameRunning = false;
 			restart = false;
-			menuRunning = false;
 			audioManager->StopMusic();
+			state = State::Main;
 			break;
 		case MenuOption::Quit:
 			gameRunning = false;
 			appRunning = false;
-			menuRunning = false;
 			audioManager->StopMusic();
 			audioManager->Release();
 			break;
 	}
-}
-
-void menuMainLoop() {
-	SDL_Event event;
-
-	SDL_FRect extendedWindowR;
-	extendedWindowR.w = windowWidth + 5;
-	extendedWindowR.h = windowHeight + 5;
-	extendedWindowR.x = -5;
-	extendedWindowR.y = -5;
-
-	while (SDL_PollEvent(&event)) {
-		if (event.type == SDL_QUIT) {
-			menuRunning = false;
-			appRunning = false;
-		}
-		if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED) {
-			SDL_RenderSetScale(renderer, event.window.data1 / (float)windowWidth, event.window.data2 / (float)windowHeight);
-		}
-		if (event.type == SDL_MOUSEBUTTONDOWN) {
-			buttons[event.button.button] = true;
-			if (controlsMenu) {
-				if (SDL_PointInFRect(&mousePos, &controlsOptions.buttonText.dstR)) {
-					audioManager->PlaySFX(SFXAudio::UISuccess);
-					controlsMenu = false;
-					HandleMenuOption(controlsOptions.menuType);
-				}
-				else {
-					audioManager->PlaySFX(SFXAudio::UIFail);
-				}
-			}
-		}
-		if (event.type == SDL_MOUSEBUTTONUP) {
-			buttons[event.button.button] = false;
-		}
-		if (event.type == SDL_MOUSEMOTION) {
-			float scaleX, scaleY;
-			SDL_RenderGetScale(renderer, &scaleX, &scaleY);
-			mousePos.x = event.motion.x / scaleX;
-			mousePos.y = event.motion.y / scaleY;
-			realMousePos.x = event.motion.x;
-			realMousePos.y = event.motion.y;
-			if (controlsMenu) {
-				if (SDL_PointInFRect(&mousePos, &controlsOptions.buttonText.dstR)) {
-					controlsOptions.selected = true;
-				}
-				else {
-					controlsOptions.selected = false;
-				}
-			}
-		}
-	}
-	RenderAll();
 }
 #pragma endregion
