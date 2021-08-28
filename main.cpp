@@ -225,6 +225,7 @@ void mainLoop()
 					if (sqrDis > (BOMB_RADIUS * BOMB_RADIUS))
 						continue;
 					enemies.erase(enemies.begin() + i--); //Destroy the enemy if it is within the radius
+					audioManager->PlaySFX(SFXAudio::EnemyHit);
 					audioManager->PlaySFX(SFXAudio::EnemyDeath);
 				}
 
@@ -282,6 +283,7 @@ void mainLoop()
 		}
 
 		if (player.GetHealth() <= 0 && !gameOver) {
+			audioManager->PlaySFX(SFXAudio::PlayerDeath);
 			gameOver = true;
 			pauseMosPos = mousePos;
 		}
@@ -660,14 +662,17 @@ void InputEvents(const SDL_Event& event)
 		keys[event.key.keysym.scancode] = false;
 	}
 	if (event.type == SDL_MOUSEBUTTONDOWN) {
+		bool uiSuccess = false;
+		bool menuSuccess = false;
+		bool insufficientMoney = false;
 		buttons[event.button.button] = true;
 		if (gameOver) {
 			buttons[event.button.button] = false;
 			// Game is over, so you can only interact with the menu on button clicks
 			for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
 				if (SDL_PointInFRect(&mousePos, &gameOverOptions[i].buttonText.dstR)) {
-					audioManager->PlaySFX(SFXAudio::UI);
 					HandleMenuOption(gameOverOptions[i].menuType);
+					uiSuccess = true;
 				}
 			}
 		}
@@ -676,8 +681,8 @@ void InputEvents(const SDL_Event& event)
 			// Game is paused, so you can only interact with the menu on button clicks
 			for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
 				if (SDL_PointInFRect(&mousePos, &pauseOptions[i].buttonText.dstR)) {
-					audioManager->PlaySFX(SFXAudio::UI);
 					HandleMenuOption(pauseOptions[i].menuType);
+					uiSuccess = true;
 				}
 			}
 		}
@@ -685,6 +690,7 @@ void InputEvents(const SDL_Event& event)
 			if (SDL_PointInFRect(&mousePos, &closeBtnR) && (buyingShield || buyingShotgun)) {
 				buyingShield = false;
 				buyingShotgun = false;
+				menuSuccess = true;
 			}
 			if (SDL_PointInFRect(&mousePos, &buyBtnR) && buyingShield) {
 				if (std::stoi(moneyText.text) >= std::stoi(shieldPriceText.text)) {
@@ -695,6 +701,10 @@ void InputEvents(const SDL_Event& event)
 					shieldHealthText.setText(renderer, robotoF, sText, { 255, 255, 255 });
 #endif
 					moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shieldPriceText.text));
+					menuSuccess = true;
+				}
+				else {
+					insufficientMoney = true;
 				}
 			}
 			if (SDL_PointInFRect(&mousePos, &buyShotgunBtnR) && buyingShotgun) {
@@ -702,9 +712,28 @@ void InputEvents(const SDL_Event& event)
 					hasShotgun = true;
 					player.shotgunAmmo = SHOTGUN_MAX_AMMO;
 					moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shotgunPriceText.text));
+					menuSuccess = true;
+				}
+				else {
+					insufficientMoney = true;
 				}
 			}
 		}
+
+		if (uiSuccess) {
+			audioManager->PlaySFX(SFXAudio::UISuccess);
+		}
+		else {
+			if (pausing || gameOver) {
+				audioManager->PlaySFX(SFXAudio::UIFail);
+			}
+			else if (menuSuccess) {
+				audioManager->PlaySFX(SFXAudio::MenuSuccess);
+			}
+			else if (insufficientMoney) {
+				audioManager->PlaySFX(SFXAudio::MenuFail);
+			}
+		}		
 	}
 	if (event.type == SDL_MOUSEBUTTONUP) {
 		buttons[event.button.button] = false;
@@ -872,7 +901,6 @@ deleteCollidingBegin:
 					BounceOff(&bullets[i], &player, false);
 				}
 				else {
-					audioManager->PlaySFX(SFXAudio::PlayerHit);
 					player.SetHealth(player.GetHealth() - 1);
 					bullets.erase(bullets.begin() + i--);
 					healthText.setText(renderer, robotoF, player.GetHealth(), { 255, 0, 0 });
@@ -894,6 +922,7 @@ deleteCollidingBegin:
 				std::string streakText = "Kill streak: " + std::to_string(player.streak);
 				killStreakText.setText(renderer, robotoF, streakText, { 255, 255, 255 });
 
+				audioManager->PlaySFX(SFXAudio::EnemyHit);
 				audioManager->PlaySFX(SFXAudio::EnemyDeath);
 				enemies.erase(enemies.begin() + j--);
 				bullets.erase(bullets.begin() + i--);
@@ -1103,8 +1132,7 @@ void RenderAll()
 void FireWhenReady()
 {
 	if (bulletClock.getElapsedTime() > BULLET_SPAWN_DELAY_IN_MS) {
-
-		audioManager->PlaySFX(SFXAudio::PlayerFire);
+		SFXAudio weaponType = SFXAudio::PlayerFire1;
 		//TODO: Encapsulate this in a function (and probably a different file)
 		bullets.push_back(Bullet(TargetMask::EnemiesMask));
 		bullets.back().r.w = 32;
@@ -1127,6 +1155,7 @@ void FireWhenReady()
 		bullets.back().dx = finalPos.x;
 
 		if (hasShotgun) {
+			weaponType = SFXAudio::PlayerFire2;
 			player.shotgunAmmo--;
 
 			bullets.push_back(bullets.back());
@@ -1141,7 +1170,7 @@ void FireWhenReady()
 			if (player.shotgunAmmo <= 0)
 				hasShotgun = false;
 		}
-
+		audioManager->PlaySFX(weaponType);
 		bulletClock.restart();
 	}
 }
@@ -1221,10 +1250,11 @@ MenuOption DisplayMainMenu(TTF_Font* titleFont, TTF_Font* font)
 			case SDL_MOUSEBUTTONDOWN:
 				for (int i = 0; i < NUMMENU; ++i) {
 					if (SDL_PointInFRect(&mousePos, &buttons[i].buttonText.dstR)) {
-						audioManager->PlaySFX(SFXAudio::UI);
+						audioManager->PlaySFX(SFXAudio::UISuccess);
 						return buttons[i].menuType;
 					}
 				}
+				audioManager->PlaySFX(SFXAudio::UIFail);
 				break;
 			}
 		}
@@ -1461,9 +1491,12 @@ void menuMainLoop() {
 			buttons[event.button.button] = true;
 			if (controlsMenu) {
 				if (SDL_PointInFRect(&mousePos, &controlsOptions.buttonText.dstR)) {
-					audioManager->PlaySFX(SFXAudio::UI);
+					audioManager->PlaySFX(SFXAudio::UISuccess);
 					controlsMenu = false;
 					HandleMenuOption(controlsOptions.menuType);
+				}
+				else {
+					audioManager->PlaySFX(SFXAudio::UIFail);
 				}
 			}
 		}
