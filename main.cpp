@@ -63,7 +63,7 @@ void ClocksInit();
 
 void BounceOff(Entity* a, Entity* b, bool affectB);
 
-MenuName displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Point* mousePosMenu);
+MenuOption displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Point* mousePosMenu);
 
 void InputEvents(const SDL_Event& event);
 
@@ -174,8 +174,8 @@ int main(int argc, char* argv[])
     UiInit();
     ClocksInit();
 
-    MenuName buttonType = displayMainMenu(renderer, robotoF, &realMousePos);
-    if (buttonType == MenuName::Quit) {
+    MenuOption buttonType = displayMainMenu(renderer, robotoF, &realMousePos);
+    if (buttonType == MenuOption::Quit) {
         running = false;
     }
 #ifdef __EMSCRIPTEN__
@@ -344,12 +344,12 @@ void BounceOff(Entity* a, Entity* b, bool affectB)
     b->dy = directionB.y;
 }
 
-MenuName displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Point* mousePosMenu)
+MenuOption displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Point* mousePosMenu)
 {
     const int NUMMENU = 2;
     MenuButton buttons[NUMMENU];
     const std::string labels[NUMMENU] = { "Play", "Exit" };
-    const MenuName menuTypes[NUMMENU] = { MenuName::Play, MenuName::Quit };
+    const MenuOption menuTypes[NUMMENU] = { MenuOption::Play, MenuOption::Quit };
     SDL_Color color[2] = { { 255, 255, 255 }, { 255, 0, 0 } };
 
     // Setup background and title
@@ -385,7 +385,7 @@ MenuName displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Poi
         while (SDL_PollEvent(&eventMenu)) {
             switch (eventMenu.type) {
             case SDL_QUIT:
-                return MenuName::Quit;
+                return MenuOption::Quit;
             case SDL_WINDOWEVENT:
                 if (eventMenu.window.event == SDL_WINDOWEVENT_RESIZED) {
                     SDL_RenderSetScale(rendererMenu, eventMenu.window.data1 / (float)windowWidth, eventMenu.window.data2 / (float)windowHeight);
@@ -420,7 +420,7 @@ MenuName displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Poi
                 break;
             case SDL_KEYDOWN:
                 if (eventMenu.key.keysym.sym == SDLK_ESCAPE) {
-                    return MenuName::Quit;
+                    return MenuOption::Quit;
                 }
                 break;
             }

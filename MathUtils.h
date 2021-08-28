@@ -21,6 +21,8 @@ public:
 
     static float GetMagnitude(const SDL_Point &point);
 
+    static float GetMagnitudeSqr(const SDL_FPoint &point);
+
     static SDL_FPoint GetNormalized(float x, float y);
 
     static SDL_FPoint GetNormalized(const SDL_Point &point); //Maybe make a version with SDL_FPoint parameters
@@ -32,6 +34,8 @@ public:
     static SDL_FPoint VectorSubstract(const SDL_Point& a, const SDL_Point& b);
 
     static void VectorSubstract(SDL_Point* a, const SDL_Point& b);
+
+    static float DistanceSqr(const SDL_FPoint& a, const SDL_FPoint& b);
 
     static SDL_FPoint ToSDL_FPoint(const SDL_Point& point);
 };

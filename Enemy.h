@@ -3,6 +3,7 @@
 #include "Clock.h"
 #include "Bullet.h"
 #include "Movement.h"
+#include "AudioManager.h"
 
 class Enemy : public Entity {
 public:
@@ -15,4 +16,5 @@ public:
 private:
 	Clock shootingClock;
 	int shootingInterval;
+	AudioManager* audioManager = AudioManager::Instance();
 };
