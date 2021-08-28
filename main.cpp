@@ -116,15 +116,15 @@ void RenderAll();
 
 void FireWhenReady();
 
-MenuOption DisplayMainMenu(TTF_Font* font);
+MenuOption DisplayMainMenu(TTF_Font* titleFont, TTF_Font* font);
 
 void RenderPauseMenu(TTF_Font* font);
 
-void PauseInit(TTF_Font* font);
+void PauseInit(TTF_Font* titleFont, TTF_Font* font);
 
 void RenderGameOverMenu(TTF_Font* font);
 
-void GameOverInit(TTF_Font* font);
+void GameOverInit(TTF_Font* titleFont, TTF_Font* font);
 
 void HandleMenuOption(MenuOption option);
 
@@ -306,8 +306,8 @@ int main(int argc, char* argv[])
     uiSelector.h = 32;
 
     UiInit();
-    PauseInit(robotoF);
-    GameOverInit(robotoF);
+    PauseInit(moonhouseF, robotoF);
+    GameOverInit(moonhouseF, robotoF);
     
 
 #ifdef __EMSCRIPTEN__
@@ -315,7 +315,7 @@ int main(int argc, char* argv[])
 #else
     while (appRunning) {
         if (!restart) {
-            MenuOption buttonType = DisplayMainMenu(robotoF);
+            MenuOption buttonType = DisplayMainMenu(moonhouseF, robotoF);
             HandleMenuOption(buttonType);
         }
         else {
@@ -447,6 +447,7 @@ void WindowInit()
     window = SDL_CreateWindow("TotalChaos", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_RESIZABLE);
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     robotoF = TTF_OpenFont("res/roboto.ttf", 72);
+    moonhouseF = TTF_OpenFont("res/moonhouse.ttf", 72);
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
     SDL_RenderSetScale(renderer, w / (float)windowWidth, h / (float)windowHeight);
@@ -934,7 +935,7 @@ void FireWhenReady()
 }
 
 #pragma region Menu Functions
-MenuOption DisplayMainMenu(TTF_Font* font)
+MenuOption DisplayMainMenu(TTF_Font* titleFont, TTF_Font* font)
 {
     const int NUMMENU = 2;
     MenuButton buttons[NUMMENU];
@@ -950,7 +951,7 @@ MenuOption DisplayMainMenu(TTF_Font* font)
     titleText.dstR.h = 100;
     titleText.dstR.x = windowWidth / 2.0f - titleText.dstR.w / 2.0f;
     titleText.dstR.y = titleText.dstR.h / 2.0f;
-    titleText.setText(renderer, font, "Total Chaos In Space", MAIN_MENU_COLOR);
+    titleText.setText(renderer, titleFont, "Total Chaos In Space", MAIN_MENU_COLOR);
 
     // Setup buttons
     for (int i = 0; i < NUMMENU; ++i) {
@@ -1050,7 +1051,7 @@ void RenderPauseMenu(TTF_Font* font) {
     }
 }
 
-void PauseInit(TTF_Font* font) {
+void PauseInit(TTF_Font* titleFont, TTF_Font* font) {
     // Setup background and title
     pauseContainer.w = windowWidth / 2.0f - 75;
     pauseContainer.h = windowHeight;
@@ -1061,7 +1062,7 @@ void PauseInit(TTF_Font* font) {
     pauseTitleText.dstR.h = 100;
     pauseTitleText.dstR.x = windowWidth / 2.0f - pauseTitleText.dstR.w / 2.0f;
     pauseTitleText.dstR.y = pauseTitleText.dstR.h / 2.0f;
-    pauseTitleText.setText(renderer, font, "Paused", PAUSE_MENU_COLOR);
+    pauseTitleText.setText(renderer, titleFont, "Paused", PAUSE_MENU_COLOR);
 
     pauseLabelLargest = 0.0f;
     // Setup buttons
@@ -1100,7 +1101,7 @@ void RenderGameOverMenu(TTF_Font* font) {
     }
 }
 
-void GameOverInit(TTF_Font* font) {
+void GameOverInit(TTF_Font* titleFont, TTF_Font* font) {
     // Setup background and title
     gameOverContainer.w = windowWidth;
     gameOverContainer.h = windowHeight;
@@ -1111,7 +1112,7 @@ void GameOverInit(TTF_Font* font) {
     gameOverTitleText.dstR.h = 100;
     gameOverTitleText.dstR.x = windowWidth / 2.0f - gameOverTitleText.dstR.w / 2.0f;
     gameOverTitleText.dstR.h = gameOverTitleText.dstR.h / 2.0f + 100;
-    gameOverTitleText.setText(renderer, font, "GAME OVER", GAMEOVER_MENU_COLOR);
+    gameOverTitleText.setText(renderer, titleFont, "GAME OVER", GAMEOVER_MENU_COLOR);
 
     gameOverLargest = 0.0f;
     // Setup buttons
