@@ -2,7 +2,7 @@
 //#include <cstdio>
 
 Player::Player() {
-	this->health = 100;
+	this->health = 50;
 	this->shotgunAmmo = 0;
 	this->streak = 0;
 	this->hasBomb = false;
