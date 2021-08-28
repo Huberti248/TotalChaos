@@ -47,6 +47,8 @@ using namespace std::chrono_literals;
 #include <emscripten/html5.h>
 #endif
 
+//#include "Audio.h"
+#include "AudioManager.h"
 #include "MathUtils.h"
 #include "Movement.h"
 #include "Menu.h"
@@ -55,6 +57,7 @@ using namespace std::chrono_literals;
 #include "Enemy.h"
 #include "Bullet.h"
 #include "Clock.h"
+#include "Crypto.h"
 
 // NOTE: Remember to uncomment it on every release
 //#define RELEASE
@@ -82,6 +85,8 @@ using namespace std::chrono_literals;
 #define HEALTH_SPAWN_MIN_DELAY_IN_MS 30000
 #define HEALTH_SPAWN_MAX_DELAY_IN_MS 90000
 #define PORTAL_SPAWN_DELAY_IN_MS 5000
+#define STREAK_BOMB_REQUIREMENT 20
+#define BOMB_RADIUS 500
 
 
 SDL_Window* window;
@@ -91,8 +96,10 @@ int windowHeight = 720;
 
 SDL_Point mousePos;
 SDL_Point realMousePos;
+SDL_Point pauseMosPos;
 bool keys[SDL_NUM_SCANCODES];
 bool buttons[SDL_BUTTON_X2 + 1];
 TTF_Font* robotoF;
-bool running = true;
-
+bool gameRunning = true;
+bool appRunning = true;
+std::string ek = "q1YZbqq48XNeV77Egwtk";

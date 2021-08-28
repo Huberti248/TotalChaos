@@ -186,7 +186,7 @@ struct Text {
 };
 
 struct MenuButton {
-    MenuOption menuType;
+	MenuOption menuType;
 	Text buttonText;
     std::string label;
 	bool selected;

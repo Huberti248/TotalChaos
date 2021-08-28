@@ -1,4 +1,5 @@
 #include "SdlDefinitions.h"
+#include "AudioManager.h"
 
 Player player;
 SDL_Texture* playerT;
@@ -9,6 +10,7 @@ SDL_Texture* purpleBulletT;
 SDL_Texture* enemyT;
 SDL_Texture* planetT;
 SDL_Texture* meatT;
+SDL_Texture* explosionT;
 SDL_Texture* buyT;
 SDL_Texture* shieldT;
 SDL_Texture* closeT;
@@ -28,6 +30,8 @@ std::vector<Entity> planets;
 Clock planetClock;
 std::vector<Entity> healthPickups;
 Clock healthPickupClock;
+std::vector<Entity> bombs;
+Clock bombClock;
 bool buyingShield = false;
 Text shieldPriceText;
 Text shieldText;
@@ -44,6 +48,45 @@ SDL_FRect closeBtnR;
 int healthSpawnTime = 0;
 std::vector<SDL_FRect> portalRects;
 Clock portalClock;
+MenuButton pauseOptions[PAUSE_NUM_OPTIONS];
+const std::string pauseLabels[PAUSE_NUM_OPTIONS] = {
+    "Resume",
+    "Controls - TBC",
+    "Highscore - TBC",
+    "Return to Main Menu",
+    "Quit to Desktop"
+};
+const MenuOption pauseMenuTypes[PAUSE_NUM_OPTIONS] = {
+    MenuOption::Resume,
+    MenuOption::Controls,
+    MenuOption::Highscores,
+    MenuOption::Main,
+    MenuOption::Quit
+};
+Text pauseTitleText;
+SDL_FRect pauseContainer;
+SDL_FRect uiSelector;
+float pauseLabelLargest;
+bool pausing = false;
+bool pauseKeyHeld = false;
+MenuButton gameOverOptions[GAMEOVER_NUM_OPTIONS];
+const std::string gameOverLabels[GAMEOVER_NUM_OPTIONS] = {
+    "Play Again",
+    "Highscore - TBC",
+    "Return to Main Menu"
+};
+const MenuOption gameOverMenuTypes[GAMEOVER_NUM_OPTIONS] = {
+    MenuOption::Restart,
+    MenuOption::Highscores,
+    MenuOption::Main
+};
+Text gameOverTitleText;
+SDL_FRect gameOverContainer;
+float gameOverLargest;
+bool gameOver = false;
+bool restart = false;
+float playerHealth;
+AudioManager* audioManager = AudioManager::Instance();
 Text shotgunPriceText;
 Text shotgunText;
 SDL_FRect buyShotgunR;
@@ -52,6 +95,8 @@ bool buyingShotgun = false;
 bool hasShotgun = false;
 
 void WindowInit();
+
+void GlobalsInit();
 
 void mainLoop();
 
@@ -81,6 +126,18 @@ void RenderAll();
 
 void FireWhenReady();
 
+MenuOption DisplayMainMenu(TTF_Font* font);
+
+void RenderPauseMenu(TTF_Font* font);
+
+void PauseInit(TTF_Font* font);
+
+void RenderGameOverMenu(TTF_Font* font);
+
+void GameOverInit(TTF_Font* font);
+
+void HandleMenuOption(MenuOption option);
+
 void mainLoop()
 {
     float deltaTime = globalClock.restart();
@@ -95,7 +152,7 @@ void mainLoop()
     while (SDL_PollEvent(&event)) {
         InputEvents(event);
     }
-    if (!buyingShield && !buyingShotgun) {
+    if (!buyingShield && !buyingShotgun && !pausing && !gameOver) {
         player.dx = 0;
         player.dy = 0;
         if (keys[SDL_SCANCODE_A]) {
@@ -113,6 +170,54 @@ void mainLoop()
         if (buttons[SDL_BUTTON_LEFT]) {
             FireWhenReady();
         }
+        if (buttons[SDL_BUTTON_RIGHT] && player.hasBomb) {
+            //If you have a bomb destroy every bullet and enemy within a radius
+            for (size_t i = 0; i < bullets.size(); i++) {
+                //Don't destroy the player's bullets
+                if (bullets[i].GetTargetMask() == TargetMask::EnemiesMask)
+                    continue;
+                //Check if the bullet is within the radius
+                SDL_FPoint playerPos = {
+                    player.r.x,
+                    player.r.y
+                };
+
+                SDL_FPoint bulletPos = {
+                    bullets[i].r.x,
+                    bullets[i].r.y
+                };
+
+                float sqrDis = MathUtils::DistanceSqr(bulletPos, playerPos);
+
+                if (sqrDis > (BOMB_RADIUS * BOMB_RADIUS))
+                    continue;
+                bullets.erase(bullets.begin() + i--); //Destroy the bullet if it is within the radius
+            }
+
+            for (size_t i = 0; i < enemies.size(); i++) {
+                SDL_FPoint playerPos = {
+                    player.r.x,
+                    player.r.y
+                };
+
+                SDL_FPoint enemyPos = {
+                    enemies[i].r.x,
+                    enemies[i].r.y
+                };
+
+                float sqrDis = MathUtils::DistanceSqr(enemyPos, playerPos);
+
+                if (sqrDis > (BOMB_RADIUS * BOMB_RADIUS))
+                    continue;
+                enemies.erase(enemies.begin() + i--); //Destroy the enemy if it is within the radius
+                audioManager->PlaySFX(SFXAudio::EnemyDeath);
+            }
+
+            //Reset the player's streak
+            //TODO: Make this a function on the getters and setters of hasBomb
+            player.streak = 0;
+            player.hasBomb = false;
+        }
 
         EnemySpawn();
 
@@ -123,8 +228,8 @@ void mainLoop()
         EnemyBehavior(extendedWindowR, deltaTime);
 
         PowerUpSpawner();
-
-        if (portalClock.getElapsedTime() > PORTAL_SPAWN_DELAY_IN_MS) {
+        //To Review (more than one portal at a time)
+        if (portalClock.getElapsedTime() > PORTAL_SPAWN_DELAY_IN_MS && portalRects.size() < 1) {
             portalRects.push_back(SDL_FRect());
             portalRects.back().w = 32;
             portalRects.back().h = 32;
@@ -150,15 +255,56 @@ void mainLoop()
                 if (i % 2 != 0) {
                     portalRects.erase(portalRects.begin() + i--);
                     portalRects.erase(portalRects.begin() + i);
+                    portalClock.restart(); // To review
                 }
                 else {
                     portalRects.erase(portalRects.begin() + i);
                     portalRects.erase(portalRects.begin() + i--);
+                    portalClock.restart(); // To review
                 }
             }
         }
     }
+
+    if (player.GetHealth() <= 0 && !gameOver) {
+        gameOver = true;
+        pauseMosPos = mousePos;
+    }
     RenderAll();
+}
+
+void GlobalsInit()
+{
+    player.dx = 0;
+    player.dy = 0;
+    player.ghostBullet = false;
+    player.hasBomb = false;
+    player.streak = 0;
+    player.r.x = windowWidth / 2 - player.r.w / 2;
+    player.r.y = windowHeight / 2 - player.r.h / 2;
+    player.SetHealth(playerHealth);
+
+    bullets.clear();
+    enemies.clear();
+    killPointsText.setText(renderer, robotoF, "0");
+    healthText.setText(renderer, robotoF, playerHealth, { 255, 0, 0 });
+    planets.clear();
+    healthPickups.clear();
+    bombs.clear();
+    buyingShield = false;
+    buyingShotgun = false;
+
+    std::string sText = "Shield: " + std::to_string(shieldHealth);
+    shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
+
+    moneyText.setText(renderer, robotoF, 0);
+    hasShield = false;
+    healthSpawnTime = 0;
+    portalRects.clear();
+    pausing = false;
+    pauseKeyHeld = false;
+    gameOver = false;
+    restart = false;
 }
 
 int main(int argc, char* argv[])
@@ -168,21 +314,38 @@ int main(int argc, char* argv[])
 
     player.r.w = 32;
     player.r.h = 32;
-    player.r.x = windowWidth / 2 - player.r.w / 2;
-    player.r.y = windowHeight / 2 - player.r.h / 2;
+    playerHealth = player.GetHealth();
+
+    uiSelector.w = 32;
+    uiSelector.h = 32;
 
     UiInit();
     ClocksInit();
+    PauseInit(robotoF);
+    GameOverInit(robotoF);
 
     MenuOption buttonType = displayMainMenu(renderer, robotoF, &realMousePos);
     if (buttonType == MenuOption::Quit) {
-        running = false;
+        gameRunning = false;
     }
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(mainLoop, 0, 1);
 #else
-    while (running) {
-        mainLoop();
+    while (appRunning) {
+        if (!restart) {
+            MenuOption buttonType = DisplayMainMenu(robotoF);
+            HandleMenuOption(buttonType);
+        }
+        else {
+            gameRunning = true;
+        }
+
+        GlobalsInit();
+        ClocksInit();
+
+        while (gameRunning) {
+            mainLoop();
+        }
     }
 #endif
     // TODO: On mobile remember to use eventWatch function (it doesn't reach this code when terminating)
@@ -199,12 +362,16 @@ void TexturesInit()
     enemyT = IMG_LoadTexture(renderer, "res/enemy.png");
     planetT = IMG_LoadTexture(renderer, "res/planet.png");
     meatT = IMG_LoadTexture(renderer, "res/meat.png");
+#ifdef _DEBUG //Debug define guard on purpose to generate an error if we don't replace this
+    //TODO: REPLCE THIS, AS IT IS ONLY A PLACEHOLDER!!!!
+    explosionT = IMG_LoadTexture(renderer, "res/gun.png");
+#endif
+    portalT = IMG_LoadTexture(renderer, "res/portal.png");
     buyT = IMG_LoadTexture(renderer, "res/buy.png");
     shieldT = IMG_LoadTexture(renderer, "res/shield.png");
     closeT = IMG_LoadTexture(renderer, "res/close.png");
     coinsT = IMG_LoadTexture(renderer, "res/coins.png");
     uiSelectedT = IMG_LoadTexture(renderer, "res/player.png");
-    portalT = IMG_LoadTexture(renderer, "res/portal.png");
     weaponPlanetT = IMG_LoadTexture(renderer, "res/weaponPlanet.png");
     shotgunT = IMG_LoadTexture(renderer, "res/shotgun.png");
 }
@@ -233,7 +400,7 @@ void UiInit()
     shieldHealthText.dstR.x = windowWidth / 3 - shieldPriceText.dstR.w / 3;
     shieldHealthText.dstR.y = 0;
     std::string sText = "Shield: " + std::to_string(shieldHealth);
-    shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
+    shieldHealthText.setText(renderer, robotoF, sText, { 255, 255, 255 });
 
     shieldPriceText.setText(renderer, robotoF, "50");
     shieldPriceText.dstR.w = 100;
@@ -306,6 +473,7 @@ void WindowInit()
     SDL_LogSetOutputFunction(logOutputCallback, 0);
     SDL_Init(SDL_INIT_EVERYTHING);
     TTF_Init();
+    //Mix_OpenAudio(AUDIO_FREQUENCY, MIX_DEFAULT_FORMAT, AUDIO_NUM_CHANNELS, AUDIO_CHUNK_SIZE);
     SDL_GetMouseState(&mousePos.x, &mousePos.y);
     window = SDL_CreateWindow("TotalChaos", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_RESIZABLE);
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
@@ -314,6 +482,7 @@ void WindowInit()
     SDL_GetWindowSize(window, &w, &h);
     SDL_RenderSetScale(renderer, w / (float)windowWidth, h / (float)windowHeight);
     SDL_AddEventWatch(eventWatch, 0);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 }
 
 void BounceOff(Entity* a, Entity* b, bool affectB)
@@ -442,40 +611,73 @@ MenuOption displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_P
 
 void InputEvents(const SDL_Event& event)
 {
-    if (event.type == SDL_QUIT || event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
-        running = false;
+    if (event.type == SDL_QUIT) {
+        gameRunning = false;
+        appRunning = false;
         // TODO: On mobile remember to use eventWatch function (it doesn't reach this code when terminating)
     }
     if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED) {
         SDL_RenderSetScale(renderer, event.window.data1 / (float)windowWidth, event.window.data2 / (float)windowHeight);
     }
     if (event.type == SDL_KEYDOWN) {
+        if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE && !pauseKeyHeld && !gameOver) {
+            pausing = !pausing;
+            pauseKeyHeld = true;
+            pauseMosPos = mousePos;
+
+            pausing ? audioManager->PauseMusic() : audioManager->ResumeMusic();
+        }
         keys[event.key.keysym.scancode] = true;
     }
     if (event.type == SDL_KEYUP) {
+        if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
+            pauseKeyHeld = false;
+        }
         keys[event.key.keysym.scancode] = false;
     }
     if (event.type == SDL_MOUSEBUTTONDOWN) {
         buttons[event.button.button] = true;
-        if (SDL_PointInFRect(&mousePos, &closeBtnR) && (buyingShield || buyingShotgun)) {
-            buyingShield = false;
-            buyingShotgun = false;
-        }
-        if (SDL_PointInFRect(&mousePos, &buyBtnR) && buyingShield) {
-            if (std::stoi(moneyText.text) >= std::stoi(shieldPriceText.text)) {
-                hasShield = true;
-                shieldHealth = 10;
-#if _DEBUG
-                std::string sText = "Shield: " + std::to_string(shieldHealth);
-                shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
-#endif
-                moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shieldPriceText.text));
+        if (gameOver) {
+            buttons[event.button.button] = false;
+            // Game is over, so you can only interact with the menu on button clicks
+            for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
+                if (SDL_PointInFRect(&mousePos, &gameOverOptions[i].buttonText.dstR)) {
+                    audioManager->PlaySFX(SFXAudio::UI);
+                    HandleMenuOption(gameOverOptions[i].menuType);
+                }
             }
         }
-        if (SDL_PointInFRect(&mousePos, &buyShotgunBtnR) && buyingShotgun) {
-            if (std::stoi(moneyText.text) >= std::stoi(shotgunPriceText.text)) {
-                hasShotgun = true;
-                moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shotgunPriceText.text));
+        else if (pausing) {
+            buttons[event.button.button] = false;
+            // Game is paused, so you can only interact with the menu on button clicks
+            for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
+                if (SDL_PointInFRect(&mousePos, &pauseOptions[i].buttonText.dstR)) {
+                    audioManager->PlaySFX(SFXAudio::UI);
+                    HandleMenuOption(pauseOptions[i].menuType);
+                }
+            }
+        }
+        else {
+            if (SDL_PointInFRect(&mousePos, &closeBtnR) && (buyingShield || buyingShotgun)) {
+                buyingShield = false;
+                buyingShotgun = false;
+            }
+            if (SDL_PointInFRect(&mousePos, &buyBtnR) && buyingShield) {
+                if (std::stoi(moneyText.text) >= std::stoi(shieldPriceText.text)) {
+                    hasShield = true;
+                    shieldHealth = 10;
+#if _DEBUG
+                    std::string sText = "Shield: " + std::to_string(shieldHealth);
+                    shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
+#endif
+                    moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shieldPriceText.text));
+                }
+            }
+            if (SDL_PointInFRect(&mousePos, &buyShotgunBtnR) && buyingShotgun) {
+                if (std::stoi(moneyText.text) >= std::stoi(shotgunPriceText.text)) {
+                    hasShotgun = true;
+                    moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shotgunPriceText.text));
+                }
             }
         }
     }
@@ -489,6 +691,27 @@ void InputEvents(const SDL_Event& event)
         mousePos.y = event.motion.y / scaleY;
         realMousePos.x = event.motion.x;
         realMousePos.y = event.motion.y;
+        if (gameOver) {
+            for (int i = 0; i < GAMEOVER_NUM_OPTIONS; ++i) {
+                if (SDL_PointInFRect(&mousePos, &gameOverOptions[i].buttonText.dstR)) {
+                    gameOverOptions[i].selected = true;
+                }
+                else {
+                    gameOverOptions[i].selected = false;
+                }
+            }
+        }
+        if (pausing) {
+            // Game is paused, so you can only interact with the menu buttons
+            for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
+                if (SDL_PointInFRect(&mousePos, &pauseOptions[i].buttonText.dstR)) {
+                    pauseOptions[i].selected = true;
+                }
+                else {
+                    pauseOptions[i].selected = false;
+                }
+            }
+        }
     }
 }
 
@@ -578,6 +801,19 @@ void EntityMovement(const SDL_FRect& extendedWindowR, float deltaTime)
             healthPickups.erase(healthPickups.begin() + i--);
         }
     }
+
+    //Explosion's movement
+    for (size_t i = 0; i < bombs.size(); ++i) {
+        bombs[i].r.x += bombs[i].dx * deltaTime * PLANET_SPEED;
+        bombs[i].r.y += bombs[i].dy * deltaTime * PLANET_SPEED;
+        if (SDL_HasIntersectionF(&player.r, &bombs[i].r)) {
+            player.hasBomb = true;
+        }
+        if (SDL_HasIntersectionF(&player.r, &bombs[i].r)
+            || !SDL_HasIntersectionF(&bombs[i].r, &extendedWindowR)) {
+            bombs.erase(bombs.begin() + i--);
+        }
+    }
 }
 
 void BulletCollisions(const SDL_FRect& extendedWindowR, float deltaTime)
@@ -610,6 +846,7 @@ deleteCollidingBegin:
                     BounceOff(&bullets[i], &player, false);
                 }
                 else {
+                    audioManager->PlaySFX(SFXAudio::PlayerHit);
                     player.SetHealth(player.GetHealth() - 1);
                     bullets.erase(bullets.begin() + i--);
                     healthText.setText(renderer, robotoF, player.GetHealth(), { 255, 0, 0 });
@@ -624,9 +861,10 @@ deleteCollidingBegin:
             if ((bullets[i].GetTargetMask() & TargetMask::EnemiesMask) == 0)
                 continue;
             if (SDL_HasIntersectionF(&bullets[i].r, &enemies[j].r)) {
+                player.streak++;
+                audioManager->PlaySFX(SFXAudio::EnemyDeath);
                 enemies.erase(enemies.begin() + j--);
                 bullets.erase(bullets.begin() + i--);
-                player.streak++;
                 killPointsText.setText(renderer, robotoF, std::stoi(killPointsText.text) + 1);
                 if (std::stoi(killPointsText.text) % 100 == 0) {
                     moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 30);
@@ -711,6 +949,16 @@ void PowerUpSpawner()
         healthSpawnTime = 0;
         healthPickupClock.restart();
     }
+
+    if (!player.hasBomb && player.streak >= STREAK_BOMB_REQUIREMENT && bombs.size() < 1) {
+        //Create the bomb
+        bombs.push_back(Entity());
+        bombs.back().r.w = 64;
+        bombs.back().r.h = 64;
+        bombs.back().r.x = random(0, windowWidth - bombs.back().r.w);
+        bombs.back().r.y = -bombs.back().r.h;
+        bombs.back().dy = 1;
+    }
 }
 
 void RenderAll()
@@ -720,9 +968,15 @@ void RenderAll()
     SDL_RenderCopyF(renderer, bgT, 0, 0);
     if (hasShield) {
         SDL_RenderCopyF(renderer, shieldT, 0, &player.r);
+        shieldHealthText.draw(renderer);
     }
-    RotateEntityTowards(playerT, player, mousePos, renderer);
-    //SDL_RenderCopyF(renderer, playerT, 0, &player.r);
+    if (pausing || gameOver) {
+        RotateEntityTowards(playerT, player, pauseMosPos, renderer);
+    }
+    else {
+        RotateEntityTowards(playerT, player, mousePos, renderer);
+        //SDL_RenderCopyF(renderer, playerT, 0, &player.r);
+    }
 
     //Render bullets
     for (int i = 0; i < bullets.size(); ++i) {
@@ -749,8 +1003,6 @@ void RenderAll()
     //Render UI text
     killPointsText.draw(renderer);
     healthText.draw(renderer);
-    if (hasShield)
-        shieldHealthText.draw(renderer);
 
     //Renders planets
     for (int i = 0; i < planets.size(); ++i) {
@@ -766,11 +1018,20 @@ void RenderAll()
     for (size_t i = 0; i < healthPickups.size(); i++) {
         SDL_RenderCopyF(renderer, meatT, 0, &healthPickups[i].r);
     }
-    SDL_RenderCopyF(renderer, coinsT, 0, &moneyR);
-    moneyText.draw(renderer);
+
+    //Render portals
     for (int i = 0; i < portalRects.size(); ++i) {
         SDL_RenderCopyF(renderer, portalT, 0, &portalRects[i]);
     }
+
+    //Render bomb
+    for (size_t i = 0; i < bombs.size(); i++) {
+        SDL_RenderCopyF(renderer, explosionT, 0, &bombs[i].r);
+    }
+
+    SDL_RenderCopyF(renderer, coinsT, 0, &moneyR);
+    moneyText.draw(renderer);
+
     if (buyingShield) {
         SDL_SetRenderDrawColor(renderer, 125, 125, 125, 0);
         SDL_RenderFillRectF(renderer, &buyR);
@@ -790,12 +1051,22 @@ void RenderAll()
         SDL_RenderCopyF(renderer, closeT, 0, &closeBtnR);
         SDL_RenderCopyF(renderer, buyT, 0, &buyShotgunBtnR);
     }
+
+    if (pausing) {
+        RenderPauseMenu(robotoF);
+    }
+
+    if (gameOver) {
+        RenderGameOverMenu(robotoF);
+    }
+
     SDL_RenderPresent(renderer);
 }
 
 void FireWhenReady()
 {
     if (bulletClock.getElapsedTime() > BULLET_SPAWN_DELAY_IN_MS) {
+        audioManager->PlaySFX(SFXAudio::PlayerFire);
         //TODO: Encapsulate this in a function (and probably a different file)
         bullets.push_back(Bullet(TargetMask::EnemiesMask));
         bullets.back().r.w = 32;
@@ -827,3 +1098,244 @@ void FireWhenReady()
         bulletClock.restart();
     }
 }
+
+#pragma region Menu Functions
+MenuOption DisplayMainMenu(TTF_Font* font)
+{
+    const int NUMMENU = 2;
+    MenuButton buttons[NUMMENU];
+    const std::string labels[NUMMENU] = { "Play", "Exit" };
+    const MenuOption menuTypes[NUMMENU] = { MenuOption::Play, MenuOption::Quit };
+    SDL_Color color[2] = { { 255, 255, 255 }, { 255, 0, 0 } };
+
+    // Setup background and title
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+
+    Text titleText;
+    titleText.dstR.w = windowWidth - 100;
+    titleText.dstR.h = 100;
+    titleText.dstR.x = windowWidth / 2.0f - titleText.dstR.w / 2.0f;
+    titleText.dstR.y = titleText.dstR.h / 2.0f;
+    titleText.setText(renderer, font, "Total Chaos In Space", MAIN_MENU_COLOR);
+
+    // Setup buttons
+    for (int i = 0; i < NUMMENU; ++i) {
+        buttons[i].label = labels[i];
+        buttons[i].menuType = menuTypes[i];
+        buttons[i].selected = false;
+        buttons[i].buttonText.dstR.w = 100;
+        buttons[i].buttonText.dstR.h = 40;
+        CalculateButtonPosition(&buttons[i].buttonText.dstR, i, NUMMENU, windowWidth, windowHeight, MAIN_MENU_BUTTON_PADDING);
+        buttons[i].buttonText.dstR.y += titleText.dstR.h;
+        buttons[i].buttonText.setText(renderer, font, buttons[i].label, color[0]);
+    }
+
+    // Setup pointer by selected button.
+    SDL_FRect uiSelectedR;
+    uiSelectedR.w = 32;
+    uiSelectedR.h = 32;
+
+    SDL_Event eventMenu;
+    while (true) {
+        SDL_RenderClear(renderer);
+        while (SDL_PollEvent(&eventMenu)) {
+            switch (eventMenu.type) {
+            case SDL_QUIT:
+                return MenuOption::Quit;
+            case SDL_WINDOWEVENT:
+                if (eventMenu.window.event == SDL_WINDOWEVENT_RESIZED) {
+                    SDL_RenderSetScale(renderer, eventMenu.window.data1 / (float)windowWidth, eventMenu.window.data2 / (float)windowHeight);
+                }
+                break;
+            case SDL_MOUSEMOTION:
+                float scaleX, scaleY;
+                SDL_RenderGetScale(renderer, &scaleX, &scaleY);
+                mousePos.x = eventMenu.motion.x / scaleX;
+                mousePos.y = eventMenu.motion.y / scaleY;
+                realMousePos.x = eventMenu.motion.x;
+                realMousePos.y = eventMenu.motion.y;
+
+                for (int i = 0; i < NUMMENU; ++i) {
+                    if (SDL_PointInFRect(&mousePos, &buttons[i].buttonText.dstR)) {
+                        if (!buttons[i].selected) {
+                            buttons[i].selected = true;
+                            buttons[i].buttonText.setText(renderer, font, buttons[i].label, color[1]);
+                        }
+                    }
+                    else {
+                        if (buttons[i].selected) {
+                            buttons[i].selected = false;
+                            buttons[i].buttonText.setText(renderer, font, buttons[i].label, color[0]);
+                        }
+                    }
+                }
+                break;
+            case SDL_MOUSEBUTTONDOWN:
+                for (int i = 0; i < NUMMENU; ++i) {
+                    if (SDL_PointInFRect(&mousePos, &buttons[i].buttonText.dstR)) {
+                        audioManager->PlaySFX(SFXAudio::UI);
+                        return buttons[i].menuType;
+                    }
+                }
+                break;
+            }
+        }
+
+        titleText.draw(renderer);
+        for (MenuButton button : buttons) {
+            if (button.selected) {
+                uiSelectedR.x = button.buttonText.dstR.x - button.buttonText.dstR.w / 2.0f - uiSelectedR.w / 2.0f;
+                uiSelectedR.y = button.buttonText.dstR.y;
+                SDL_RenderCopyF(renderer, uiSelectedT, 0, &uiSelectedR);
+            }
+            button.buttonText.draw(renderer);
+        }
+
+        SDL_RenderPresent(renderer);
+    }
+}
+
+void RenderPauseMenu(TTF_Font* font)
+{
+    SDL_SetRenderDrawColor(renderer, 20, 20, 30, 200);
+    SDL_RenderFillRectF(renderer, &pauseContainer);
+    pauseTitleText.draw(renderer);
+
+    for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
+        if (pauseOptions[i].selected) {
+            pauseOptions[i].buttonText.setText(renderer, font, pauseOptions[i].label, PAUSE_SELECTED);
+            uiSelector.x = windowWidth / 2.0f - pauseLabelLargest / 2.0f - uiSelector.w - POINTER_OFFSET;
+            uiSelector.y = pauseOptions[i].buttonText.dstR.y;
+            SDL_RenderCopyF(renderer, uiSelectedT, 0, &uiSelector);
+        }
+        else {
+            pauseOptions[i].buttonText.setText(renderer, font, pauseOptions[i].label, PAUSE_UNSELECTED);
+        }
+
+        pauseOptions[i].buttonText.draw(renderer);
+    }
+}
+
+void PauseInit(TTF_Font* font)
+{
+    // Setup background and title
+    pauseContainer.w = windowWidth / 2.0f - 75;
+    pauseContainer.h = windowHeight;
+    pauseContainer.x = windowWidth / 2.0f - pauseContainer.w / 2.0f;
+    pauseContainer.y = 0;
+
+    pauseTitleText.dstR.w = pauseContainer.w - 100;
+    pauseTitleText.dstR.h = 100;
+    pauseTitleText.dstR.x = windowWidth / 2.0f - pauseTitleText.dstR.w / 2.0f;
+    pauseTitleText.dstR.y = pauseTitleText.dstR.h / 2.0f;
+    pauseTitleText.setText(renderer, font, "Paused", PAUSE_MENU_COLOR);
+
+    pauseLabelLargest = 0.0f;
+    // Setup buttons
+    for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
+        pauseOptions[i].label = pauseLabels[i];
+        pauseOptions[i].menuType = pauseMenuTypes[i];
+        pauseOptions[i].selected = false;
+        pauseOptions[i].buttonText.dstR.w = strlen(pauseOptions[i].label.c_str()) * LETTER_WIDTH;
+        pauseOptions[i].buttonText.dstR.h = 50;
+        CalculateButtonPosition(&pauseOptions[i].buttonText.dstR, i, PAUSE_NUM_OPTIONS, windowWidth, windowHeight, PAUSE_MENU_BUTTON_PADDING);
+        pauseOptions[i].buttonText.dstR.y += pauseTitleText.dstR.h;
+        pauseOptions[i].buttonText.setText(renderer, font, pauseOptions[i].label, PAUSE_UNSELECTED);
+
+        pauseLabelLargest = std::max(pauseLabelLargest, pauseOptions[i].buttonText.dstR.w);
+        ;
+    }
+}
+
+void RenderGameOverMenu(TTF_Font* font)
+{
+    SDL_SetRenderDrawColor(renderer, 60, 60, 60, 150);
+    SDL_RenderFillRectF(renderer, &gameOverContainer);
+    gameOverTitleText.draw(renderer);
+
+    for (int i = 0; i < GAMEOVER_NUM_OPTIONS; ++i) {
+        if (gameOverOptions[i].selected) {
+            gameOverOptions[i].buttonText.setText(renderer, font, gameOverOptions[i].label, GAMEOVER_SELECTED);
+            uiSelector.x = windowWidth / 2.0f - gameOverLargest / 2.0f - uiSelector.w - POINTER_OFFSET;
+            uiSelector.y = gameOverOptions[i].buttonText.dstR.y;
+            SDL_RenderCopyF(renderer, uiSelectedT, 0, &uiSelector);
+        }
+        else {
+            gameOverOptions[i].buttonText.setText(renderer, font, gameOverOptions[i].label, GAMEOVER_UNSELECTED);
+        }
+
+        gameOverOptions[i].buttonText.draw(renderer);
+    }
+}
+
+void GameOverInit(TTF_Font* font)
+{
+    // Setup background and title
+    gameOverContainer.w = windowWidth;
+    gameOverContainer.h = windowHeight;
+    gameOverContainer.x = 0;
+    gameOverContainer.y = 0;
+
+    gameOverTitleText.dstR.w = gameOverContainer.w - 300;
+    gameOverTitleText.dstR.h = 100;
+    gameOverTitleText.dstR.x = windowWidth / 2.0f - gameOverTitleText.dstR.w / 2.0f;
+    gameOverTitleText.dstR.h = gameOverTitleText.dstR.h / 2.0f + 100;
+    gameOverTitleText.setText(renderer, font, "GAME OVER", GAMEOVER_MENU_COLOR);
+
+    gameOverLargest = 0.0f;
+    // Setup buttons
+    for (int i = 0; i < GAMEOVER_NUM_OPTIONS; ++i) {
+        gameOverOptions[i].label = gameOverLabels[i];
+        gameOverOptions[i].menuType = gameOverMenuTypes[i];
+        gameOverOptions[i].selected = false;
+        gameOverOptions[i].buttonText.dstR.w = strlen(gameOverOptions[i].label.c_str()) * LETTER_WIDTH;
+        gameOverOptions[i].buttonText.dstR.h = 50;
+        CalculateButtonPosition(&gameOverOptions[i].buttonText.dstR, i, GAMEOVER_NUM_OPTIONS, windowWidth, windowHeight, GAMEOVER_MENU_BUTTON_PADDING);
+        gameOverOptions[i].buttonText.dstR.y += gameOverTitleText.dstR.h;
+        gameOverOptions[i].buttonText.setText(renderer, font, gameOverOptions[i].label, GAMEOVER_UNSELECTED);
+
+        gameOverLargest = std::max(gameOverLargest, gameOverOptions[i].buttonText.dstR.w);
+        ;
+    }
+
+    // Setup pointer by selected button.
+}
+
+void HandleMenuOption(MenuOption option)
+{
+    switch (option) {
+    case MenuOption::Play:
+        gameRunning = true;
+        audioManager->PlayMusic(MusicAudio::Background);
+        break;
+    case MenuOption::Restart:
+        restart = true;
+        gameRunning = false;
+        audioManager->StopMusic();
+        audioManager->PlayMusic(MusicAudio::Background);
+        break;
+    case MenuOption::Resume:
+        pausing = false;
+        pauseKeyHeld = false;
+        audioManager->ResumeMusic();
+        break;
+    case MenuOption::Controls:
+        gameRunning = false;
+        break;
+    case MenuOption::Highscores:
+        gameRunning = false;
+        break;
+    case MenuOption::Main:
+        gameRunning = false;
+        restart = false;
+        audioManager->StopMusic();
+        break;
+    case MenuOption::Quit:
+        gameRunning = false;
+        appRunning = false;
+        audioManager->StopMusic();
+        audioManager->Release();
+        break;
+    }
+}
+#pragma endregion
