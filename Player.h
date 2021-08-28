@@ -3,7 +3,7 @@
 
 class Player : public Entity {
 public:
-	bool ghostBullet;
+	int shotgunAmmo;
 	bool hasBomb;
 	unsigned int streak;
 
