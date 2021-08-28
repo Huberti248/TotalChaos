@@ -5,6 +5,7 @@ enum class State {
 	Gameplay,
 	Credits,
 	Controls,
+	HighScores,
 	Main
 };
 
@@ -107,14 +108,14 @@ SDL_FRect buyShotgunBtnR;
 bool buyingShotgun = false;
 bool hasShotgun = false;
 State state = State::Gameplay;
+Text highscoresTitleText;
+SDL_FRect highscoresTitleContainer;
 
 void WindowInit();
 
 void GlobalsInit();
 
 void mainLoop();
-
-void menuMainLoop();
 
 void TexturesInit();
 
@@ -153,6 +154,8 @@ void GameOverInit(TTF_Font* titleFont, TTF_Font* font);
 void RenderControlsMenu(TTF_Font* font);
 
 void RenderCreditsMenu(TTF_Font* font);
+
+void RenderHighScoresMenu(TTF_Font* titleFont, TTF_Font* font);
 
 void ControlsInit(TTF_Font* titleFont, TTF_Font* font);
 
@@ -318,7 +321,7 @@ void mainLoop()
 			}
 			if (event.type == SDL_MOUSEBUTTONDOWN) {
 				buttons[event.button.button] = true;
-				if ((state == State::Controls) || (state == State::Credits)) {
+				if ((state == State::Controls) || (state == State::Credits) || (state == State::HighScores)) {
 					if (SDL_PointInFRect(&mousePos, &controlsOptions.buttonText.dstR)) {
 						audioManager->PlaySFX(SFXAudio::UISuccess);
 						state = State::Main;
@@ -340,7 +343,7 @@ void mainLoop()
 				realMousePos.x = event.motion.x;
 				realMousePos.y = event.motion.y;
 
-				if ((state == State::Controls) || (state == State::Credits)) {
+				if ((state == State::Controls) || (state == State::Credits) || (state == State::HighScores)) {
 					if (SDL_PointInFRect(&mousePos, &controlsOptions.buttonText.dstR)) {
 						controlsOptions.selected = true;
 					}
@@ -359,6 +362,9 @@ void mainLoop()
 		}
 		else if (state == State::Credits) {
 			RenderCreditsMenu(robotoF);
+		}
+		else if (state == State::HighScores) {
+			RenderHighScoresMenu(moonhouseF, robotoF);
 		}
 		SDL_RenderPresent(renderer);
 	}
@@ -1497,6 +1503,53 @@ void ControlsInit(TTF_Font* titleFont, TTF_Font* font) {
 
 }
 
+void RenderHighScoresMenu(TTF_Font* titleFont, TTF_Font* font) {
+	highscoresTitleContainer.w = 500;
+	highscoresTitleContainer.h = 100;
+	highscoresTitleContainer.x = windowWidth / 2.0f - controlsTitleContainer.w / 2.0f;
+	highscoresTitleContainer.y = 0;
+
+	highscoresTitleText.dstR.w = 450;
+	highscoresTitleText.dstR.h = 75;
+	highscoresTitleText.dstR.x = windowWidth / 2.0f - controlsTitleText.dstR.w / 2.0f;
+	highscoresTitleText.dstR.y = controlsTitleContainer.h / 2.0f - controlsTitleText.dstR.h / 2.0f;
+	highscoresTitleText.setText(renderer, titleFont, "HIGHSCORES", TITLE_COLOR);
+	highscoresTitleText.draw(renderer);
+
+	SDL_SetRenderDrawColor(renderer, 60, 60, 60, SDL_ALPHA_OPAQUE);
+	SDL_RenderFillRectF(renderer, &controlsOptionContainer);
+
+	if (controlsOptions.selected) {
+		controlsOptions.buttonText.setText(renderer, font, controlsOptions.label, BUTTON_SELECTED);
+	}
+	else {
+		controlsOptions.buttonText.setText(renderer, font, controlsOptions.label, BUTTON_UNSELECTED);
+	}
+
+	controlsOptions.buttonText.draw(renderer);
+
+	//TODO: Add actual highscores.
+	std::vector<int> scoresI = {
+		100, 97, 90, 50, 20
+	};
+
+	std::vector<std::string> scoresC = {
+		"JS", "L", "NI", "M", "ABIBU"
+	};
+
+	for (int i = 0; i < scoresI.size(); ++i) {
+		Text score;
+		score.dstR.w = 100;
+		score.dstR.h = 50;
+		CalculateButtonPosition(&score.dstR, i, scoresI.size(), windowWidth, windowHeight, 10);
+		score.dstR.y += highscoresTitleText.dstR.h;
+
+		std::string te = scoresC[i] + " ----- " + std::to_string(scoresI[i]);
+		score.setText(renderer, robotoF, te, { 255, 255, 255 });
+		score.draw(renderer);
+	}
+}
+
 void HandleMenuOption(MenuOption option)
 {
 	switch (option) {
@@ -1525,7 +1578,8 @@ void HandleMenuOption(MenuOption option)
 			state = State::Controls;
 			break;
 		case MenuOption::Highscores:
-			gameRunning = false;
+			gameRunning = true;
+			state = State::HighScores;
 			break;
 		case MenuOption::Main:
 			gameRunning = false;
