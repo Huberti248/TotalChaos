@@ -42,6 +42,7 @@ bool buyingShield = false;
 Text shieldPriceText;
 Text shieldText;
 Text shieldHealthText;
+Text killStreakText;
 SDL_FRect buyBtnR;
 SDL_FRect buyR;
 SDL_FRect buyShieldR;
@@ -380,7 +381,6 @@ void GlobalsInit()
 {
 	player.dx = 0;
 	player.dy = 0;
-	player.ghostBullet = false;
 	player.hasBomb = false;
 	player.streak = 0;
 	player.r.x = windowWidth / 2 - player.r.w / 2;
@@ -398,7 +398,10 @@ void GlobalsInit()
 	buyingShotgun = false;
 
 	std::string sText = "Shield: " + std::to_string(shieldHealth);
-	shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
+	shieldHealthText.setText(renderer, robotoF, sText, { 255, 255, 255 });
+
+	std::string streakText = "Kill streak: " + std::to_string(player.streak);
+	killStreakText.setText(renderer, robotoF, streakText, { 255, 255, 255 });
 
 	moneyText.setText(renderer, robotoF, 0);
 	hasShield = false;
@@ -509,6 +512,14 @@ void UiInit()
 	shieldHealthText.dstR.y = 0;
 	std::string sText = "Shield: " + std::to_string(shieldHealth);
 	shieldHealthText.setText(renderer, robotoF, sText, { 255, 255, 255 });
+
+	
+	killStreakText.dstR.w = 60;
+	killStreakText.dstR.h = 30;
+	killStreakText.dstR.x = windowWidth / 4 - shieldPriceText.dstR.w / 4;
+	killStreakText.dstR.y = 0;
+	std::string streakText = "Kill streak: " + std::to_string(player.streak);
+	killStreakText.setText(renderer, robotoF, streakText, { 255, 255, 255 });
 
 	shieldPriceText.setText(renderer, robotoF, "50");
 	shieldPriceText.dstR.w = 100;
@@ -681,7 +692,7 @@ void InputEvents(const SDL_Event& event)
 					shieldHealth = 10;
 #if _DEBUG
 					std::string sText = "Shield: " + std::to_string(shieldHealth);
-					shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
+					shieldHealthText.setText(renderer, robotoF, sText, { 255, 255, 255 });
 #endif
 					moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shieldPriceText.text));
 				}
@@ -689,6 +700,7 @@ void InputEvents(const SDL_Event& event)
 			if (SDL_PointInFRect(&mousePos, &buyShotgunBtnR) && buyingShotgun) {
 				if (std::stoi(moneyText.text) >= std::stoi(shotgunPriceText.text)) {
 					hasShotgun = true;
+					player.shotgunAmmo = SHOTGUN_MAX_AMMO;
 					moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shotgunPriceText.text));
 				}
 			}
@@ -851,7 +863,7 @@ deleteCollidingBegin:
 					if (willDamage) {
 						shieldHealth--;
 						std::string sText = "Shield: " + std::to_string(shieldHealth);
-						shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
+						shieldHealthText.setText(renderer, robotoF, sText, { 255, 255, 255 });
 					}
 
 					if (shieldHealth <= 0) {
@@ -864,6 +876,9 @@ deleteCollidingBegin:
 					player.SetHealth(player.GetHealth() - 1);
 					bullets.erase(bullets.begin() + i--);
 					healthText.setText(renderer, robotoF, player.GetHealth(), { 255, 0, 0 });
+
+					std::string streakText = "Kill streak: " + std::to_string(player.streak);
+					killStreakText.setText(renderer, robotoF, streakText, { 255, 255, 255 });
 					goto deleteCollidingBegin;
 				}
 			}
@@ -876,6 +891,9 @@ deleteCollidingBegin:
 				continue;
 			if (SDL_HasIntersectionF(&bullets[i].r, &enemies[j].r)) {
 				player.streak++;
+				std::string streakText = "Kill streak: " + std::to_string(player.streak);
+				killStreakText.setText(renderer, robotoF, streakText, { 255, 255, 255 });
+
 				audioManager->PlaySFX(SFXAudio::EnemyDeath);
 				enemies.erase(enemies.begin() + j--);
 				bullets.erase(bullets.begin() + i--);
@@ -1018,6 +1036,8 @@ void RenderAll()
 	killPointsText.draw(renderer);
 	healthText.draw(renderer);
 
+	killStreakText.draw(renderer);
+
 	//Renders planets
 	for (int i = 0; i < planets.size(); ++i) {
 		if (planets[i].planetType == PlanetType::Shield) {
@@ -1083,6 +1103,7 @@ void RenderAll()
 void FireWhenReady()
 {
 	if (bulletClock.getElapsedTime() > BULLET_SPAWN_DELAY_IN_MS) {
+
 		audioManager->PlaySFX(SFXAudio::PlayerFire);
 		//TODO: Encapsulate this in a function (and probably a different file)
 		bullets.push_back(Bullet(TargetMask::EnemiesMask));
@@ -1106,14 +1127,19 @@ void FireWhenReady()
 		bullets.back().dx = finalPos.x;
 
 		if (hasShotgun) {
+			player.shotgunAmmo--;
+
 			bullets.push_back(bullets.back());
 			float angle = -135.0f * M_PI / 180.0f;
 			bullets.back().dx = -finalPos.x * cosf(angle) + finalPos.y * sinf(angle);
 			bullets.back().dy = -finalPos.x * sinf(angle) - finalPos.y * cosf(angle);
+
 			bullets.push_back(bullets.back());
 			angle = 135.0f * M_PI / 180.0f;
 			bullets.back().dx = -finalPos.x * cosf(angle) + finalPos.y * sinf(angle);
 			bullets.back().dy = -finalPos.x * sinf(angle) - finalPos.y * cosf(angle);
+			if (player.shotgunAmmo <= 0)
+				hasShotgun = false;
 		}
 
 		bulletClock.restart();

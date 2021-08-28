@@ -3,14 +3,14 @@
 
 Player::Player() {
 	this->health = 100;
-	this->ghostBullet = false;
+	this->shotgunAmmo = 0;
 	this->streak = 0;
 	this->hasBomb = false;
 }
 
 Player::Player(int health) {
 	this->health = health;
-	this->ghostBullet = false;
+	this->shotgunAmmo = 0;
 	this->streak = 0;
 	this->hasBomb = false;
 }
