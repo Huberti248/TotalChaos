@@ -105,4 +105,3 @@ TTF_Font* robotoF;
 TTF_Font* moonhouseF;
 bool gameRunning = true;
 bool appRunning = true;
-std::string ek = "q1YZbqq48XNeV77Egwtk";

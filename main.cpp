@@ -108,10 +108,15 @@ SDL_FRect buyShotgunR;
 SDL_FRect buyShotgunBtnR;
 bool buyingShotgun = false;
 bool hasShotgun = false;
-bool addingScore = false;
 State state = State::Gameplay;
 Text highscoresTitleText;
 SDL_FRect highscoresTitleContainer;
+
+//High score aux varaibles (not best practice)
+std::tuple<int, std::string> allScores[HIGH_SCORES_LIMIT];
+int indexToInsertHighScore = -1;
+bool addingScore = false;
+bool scoreAdded = false;
 
 void WindowInit();
 
@@ -164,6 +169,8 @@ void ControlsInit(TTF_Font* titleFont, TTF_Font* font);
 void HandleMenuOption(MenuOption option);
 
 void CheckAndAddHighScore(int score);
+
+void ScoreKill();
 
 void mainLoop()
 {
@@ -237,6 +244,7 @@ void mainLoop()
 
 					if (sqrDis > (BOMB_RADIUS * BOMB_RADIUS))
 						continue;
+					ScoreKill();
 					enemies.erase(enemies.begin() + i--); //Destroy the enemy if it is within the radius
 					audioManager->PlaySFX(SFXAudio::EnemyHit);
 					audioManager->PlaySFX(SFXAudio::EnemyDeath);
@@ -297,6 +305,7 @@ void mainLoop()
 
 		if (player.GetHealth() <= 0 && !gameOver) {
 			audioManager->PlaySFX(SFXAudio::PlayerDeath);
+			highScoreInputName = "";
 			gameOver = true;
 			pauseMosPos = mousePos;
 		}
@@ -406,6 +415,10 @@ void GlobalsInit()
 	pauseKeyHeld = false;
 	gameOver = false;
 	restart = false;
+	highScoreInputName = "";
+	hasShotgun = false;
+	addingScore = false;
+	scoreAdded = false;
 }
 
 int main(int argc, char* argv[])
@@ -657,6 +670,15 @@ void InputEvents(const SDL_Event& event)
 			//lop off character
 			highScoreInputName.pop_back();
 			//renderText = true;
+		}
+
+		//Add a score
+		if ((event.key.keysym.sym == SDLK_KP_ENTER || event.key.keysym.sym == SDLK_RETURN) && addingScore && highScoreInputName.length() > 0) {
+			addingScore = false;
+			scoreAdded = true;
+			allScores[indexToInsertHighScore] = std::make_tuple(std::stoi(killPointsText.text), highScoreInputName);
+			//Send the score to the file 
+			HighScores::WriteHighScore(allScores);
 		}
 
 		keys[event.key.keysym.scancode] = true;
@@ -946,11 +968,7 @@ deleteCollidingBegin:
 				audioManager->PlaySFX(SFXAudio::EnemyDeath);
 				enemies.erase(enemies.begin() + j--);
 				bullets.erase(bullets.begin() + i--);
-				killPointsText.setText(renderer, robotoF, std::stoi(killPointsText.text) + 1);
-				if (std::stoi(killPointsText.text) % 100 == 0) {
-					moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 30);
-				}
-				moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 1);
+				ScoreKill();
 				goto deleteCollidingBegin;
 			}
 		}
@@ -1341,13 +1359,17 @@ void PauseInit(TTF_Font* titleFont, TTF_Font* font) {
 	}
 }
 
-void RenderGameOverMenu(TTF_Font* font)
-{
+void RenderGameOverMenu(TTF_Font* font) {
 	SDL_SetRenderDrawColor(renderer, 60, 60, 60, 150);
 	SDL_RenderFillRectF(renderer, &gameOverContainer);
 	gameOverTitleText.draw(renderer);
-	
-	CheckAndAddHighScore(std::stoi(killPointsText.text));
+	if (!scoreAdded)
+		CheckAndAddHighScore(std::stoi(killPointsText.text));
+	else {
+		SDL_StopTextInput();
+		highScoreTextUI.setText(renderer, robotoF, "HIGH SCORE ADDED!", { 255, 255, 255 });
+		highScoreTextUI.draw(renderer);
+	}
 
 	for (int i = 0; i < GAMEOVER_NUM_OPTIONS; ++i) {
 		if (gameOverOptions[i].selected) {
@@ -1536,22 +1558,20 @@ void RenderHighScoresMenu(TTF_Font* titleFont, TTF_Font* font) {
 	controlsOptions.buttonText.draw(renderer);
 
 	//TODO: Add actual highscores.
-	std::vector<int> scoresI = {
-		100, 97, 90, 50, 20
-	};
+	HighScores::ReadScores(allScores);
 
-	std::vector<std::string> scoresC = {
-		"JS", "L", "NI", "M", "ABIBU"
-	};
+	for (int i = 0; i < HIGH_SCORES_LIMIT; ++i) {
+		int nScore = std::get<0>(allScores[i]);
+		if (nScore < 0) break;
+		std::string name = std::get<1>(allScores[i]);
 
-	for (int i = 0; i < scoresI.size(); ++i) {
 		Text score;
 		score.dstR.w = 100;
 		score.dstR.h = 50;
-		CalculateButtonPosition(&score.dstR, i, scoresI.size(), windowWidth, windowHeight, 10);
+		CalculateButtonPosition(&score.dstR, i, HIGH_SCORES_LIMIT, windowWidth, windowHeight, 10);
 		score.dstR.y += highscoresTitleText.dstR.h;
 
-		std::string te = scoresC[i] + " ----- " + std::to_string(scoresI[i]);
+		std::string te = name + " ----- " + std::to_string(nScore);
 		score.setText(renderer, robotoF, te, { 255, 255, 255 });
 		score.draw(renderer);
 	}
@@ -1604,21 +1624,18 @@ void HandleMenuOption(MenuOption option)
 }
 
 void CheckAndAddHighScore(int score) {
-	int indexToInsert = -1;
-	if (!addingScore) {
-		//Allocation
-		std::tuple<int, std::string> scores[HIGH_SCORES_LIMIT];
+	if (!addingScore && highScoreInputName.length() < 1) {
 		//Get the array of scores
-		HighScores::ReadScores(scores);
+		HighScores::ReadScores(allScores);
 		for (size_t i = 0; i < HIGH_SCORES_LIMIT; i++) {
-			int indexedScore = std::get<0>(scores[i]);
+			int indexedScore = std::get<0>(allScores[i]);
 			//Check if the score is bigger than the current one
 			if (score > indexedScore) {
 				//Ask for the name of the player, and set it to a new tuple with the score
 				addingScore = true;
-				indexToInsert = i;
+				indexToInsertHighScore = i;
+				break;
 			}
-			std::cout << std::get<1>(scores[i]) << ", " << indexedScore << std::endl;
 		}
 	}
 	else {
@@ -1626,9 +1643,16 @@ void CheckAndAddHighScore(int score) {
 		std::string txt = "New highscore, enter your name: " + highScoreInputName;
 		highScoreTextUI.setText(renderer, robotoF, txt, { 255, 255, 255 });
 		highScoreTextUI.draw(renderer);
-		//scores[i] = std::make_tuple(score, highScoreInputName);
 	}
 
 
 }
 #pragma endregion
+
+void ScoreKill() {
+	killPointsText.setText(renderer, robotoF, std::stoi(killPointsText.text) + 1);
+	if (std::stoi(killPointsText.text) % 100 == 0) {
+		moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 30);
+	}
+	moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 1);
+}
