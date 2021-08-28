@@ -522,9 +522,9 @@ void UiInit()
 	shieldPriceText.dstR.y = buyR.y + 10;
 
 	highScoreTextUI.setText(renderer, robotoF, "50");
-	highScoreTextUI.dstR.w = 100;
+	highScoreTextUI.dstR.w = 500;
 	highScoreTextUI.dstR.h = 40;
-	highScoreTextUI.dstR.x = windowWidth / 2 - shieldPriceText.dstR.w / 2;
+	highScoreTextUI.dstR.x = windowWidth / 2 - highScoreTextUI.dstR.w / 2;
 	highScoreTextUI.dstR.y = buyR.y + 10;
 
 	buyShieldR.w = 32;
@@ -668,10 +668,9 @@ void InputEvents(const SDL_Event& event)
 	{
 		//Not copy or pasting
 		if (!(SDL_GetModState() & KMOD_CTRL && (event.text.text[0] == 'c' || event.text.text[0] == 'C' || event.text.text[0] == 'v' || event.text.text[0] == 'V'))
-			&& event.text.text[0] != ' ' && highScoreInputName.length < 6) {
+			&& event.text.text[0] != ' ' && highScoreInputName.length() < 6) {
 			//Append character
 			highScoreInputName += event.text.text;
-			//renderText = true;
 		}
 	}
 
@@ -1624,7 +1623,8 @@ void CheckAndAddHighScore(int score) {
 	}
 	else {
 		SDL_StartTextInput();
-		highScoreTextUI.setText(renderer, robotoF, highScoreInputName, { 255, 255, 255 });
+		std::string txt = "New highscore, enter your name: " + highScoreInputName;
+		highScoreTextUI.setText(renderer, robotoF, txt, { 255, 255, 255 });
 		highScoreTextUI.draw(renderer);
 		//scores[i] = std::make_tuple(score, highScoreInputName);
 	}
