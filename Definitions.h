@@ -58,6 +58,7 @@ using namespace std::chrono_literals;
 #include "Bullet.h"
 #include "Clock.h"
 #include "Crypto.h"
+#include "HighScore.h"
 
 // NOTE: Remember to uncomment it on every release
 //#define RELEASE

@@ -84,6 +84,9 @@ const MenuOption gameOverMenuTypes[GAMEOVER_NUM_OPTIONS] = {
 	MenuOption::Restart,   
 	MenuOption::Main
 };
+
+std::string highScoreInputName;
+
 Text gameOverTitleText;
 SDL_FRect gameOverContainer;
 float gameOverLargest;
@@ -154,6 +157,8 @@ void RenderCreditsMenu(TTF_Font* font);
 void ControlsInit(TTF_Font* titleFont, TTF_Font* font);
 
 void HandleMenuOption(MenuOption option);
+
+void CheckAndAddHighScore();
 
 void mainLoop()
 {
@@ -632,8 +637,30 @@ void InputEvents(const SDL_Event& event)
 
 			pausing ? audioManager->PauseMusic() : audioManager->ResumeMusic();
 		}
+
+		//Handle backspace for input
+		if (event.key.keysym.sym == SDLK_BACKSPACE && highScoreInputName.length() > 0) {
+			//lop off character
+			highScoreInputName.pop_back();
+			//renderText = true;
+		}
+
 		keys[event.key.keysym.scancode] = true;
 	}
+
+	//Keyboard input for game over
+	//Special text input event
+	else if (event.type == SDL_TEXTINPUT)
+	{
+		//Not copy or pasting
+		if (!(SDL_GetModState() & KMOD_CTRL && (event.text.text[0] == 'c' || event.text.text[0] == 'C' || event.text.text[0] == 'v' || event.text.text[0] == 'V')))
+		{
+			//Append character
+			highScoreInputName += event.text.text;
+			//renderText = true;
+		}
+	}
+
 	if (event.type == SDL_KEYUP) {
 		if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
 			pauseKeyHeld = false;
@@ -647,6 +674,9 @@ void InputEvents(const SDL_Event& event)
 		buttons[event.button.button] = true;
 		if (gameOver) {
 			buttons[event.button.button] = false;
+
+			CheckAndAddHighScore();
+
 			// Game is over, so you can only interact with the menu on button clicks
 			for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
 				if (SDL_PointInFRect(&mousePos, &gameOverOptions[i].buttonText.dstR)) {
@@ -1509,6 +1539,18 @@ void HandleMenuOption(MenuOption option)
 			audioManager->StopMusic();
 			audioManager->Release();
 			break;
+	}
+}
+
+void CheckAndAddHighScore() {
+	//Allocation
+	std::tuple<int, std::string> scores[HIGH_SCORES_LIMIT];
+	//Get the array of scores
+	HighScores::ReadScores(scores);
+	for (size_t i = 0; i < HIGH_SCORES_LIMIT; i++) {
+		std::cout << std::get<1>(scores[i]) << ", " << std::get<0>(scores[i]) << std::endl;
+		//delete the heap allocated string
+		//delete std::get<1>(scores);
 	}
 }
 #pragma endregion
