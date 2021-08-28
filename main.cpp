@@ -808,6 +808,7 @@ void EntityMovement(const SDL_FRect& extendedWindowR, float deltaTime)
         healthPickups[i].r.y += healthPickups[i].dy * deltaTime * PLANET_SPEED;
         if (SDL_HasIntersectionF(&player.r, &healthPickups[i].r)) {
             player.SetHealth(player.GetHealth() + 10);
+            healthText.setText(renderer, robotoF, player.GetHealth(), { 255, 0, 0 });
         }
         if (SDL_HasIntersectionF(&player.r, &healthPickups[i].r)
             || !SDL_HasIntersectionF(&healthPickups[i].r, &extendedWindowR)) {
@@ -1106,9 +1107,13 @@ void FireWhenReady()
 
         if (hasShotgun) {
             bullets.push_back(bullets.back());
-            bullets.back().dx += randomF(-0.5, 0);
+            float angle = 45 * M_PI / 180.0f;
+            bullets.back().dx = -finalPos.x * cosf(angle) + finalPos.y * sinf(angle);
+            bullets.back().dy = -finalPos.x * sinf(angle) - finalPos.y * cosf(angle);
             bullets.push_back(bullets.back());
-            bullets.back().dx += randomF(0, 0.5);
+            angle = -45 * M_PI / 180.0f;
+            bullets.back().dx = -finalPos.x * cosf(angle) + finalPos.y * sinf(angle);
+            bullets.back().dy = -finalPos.x * sinf(angle) - finalPos.y * cosf(angle);
         }
 
         bulletClock.restart();
