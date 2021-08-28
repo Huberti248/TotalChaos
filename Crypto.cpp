@@ -1,7 +1,5 @@
 #include "Crypto.h"
 
-
-
 std::string Crypto::Encrypt(const std::string& msg, std::string& key) {
 	std::string base64Str = base64_encode(msg);
 	std::string finalMsg = Encrypt_vigenere(base64Str, key);
