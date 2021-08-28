@@ -539,7 +539,7 @@ void UiInit()
 	shieldPrizeCoinsR.y = shieldPriceText.dstR.y;
 
 	shotgunPriceText = shieldPriceText;
-	shotgunPriceText.setText(renderer, robotoF, 20);
+	shotgunPriceText.setText(renderer, robotoF, 100);
 
 	shotgunText = shieldText;
 	shotgunText.setText(renderer, robotoF, "Shotgun");
