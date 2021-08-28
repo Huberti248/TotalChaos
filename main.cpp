@@ -47,6 +47,7 @@ Text shieldText;
 Text shieldHealthText;
 Text killStreakText;
 Text bombText;
+Text highScoreTextUI;
 SDL_FRect buyBtnR;
 SDL_FRect buyR;
 SDL_FRect buyShieldR;
@@ -107,6 +108,7 @@ SDL_FRect buyShotgunR;
 SDL_FRect buyShotgunBtnR;
 bool buyingShotgun = false;
 bool hasShotgun = false;
+bool addingScore = false;
 State state = State::Gameplay;
 Text highscoresTitleText;
 SDL_FRect highscoresTitleContainer;
@@ -161,7 +163,7 @@ void ControlsInit(TTF_Font* titleFont, TTF_Font* font);
 
 void HandleMenuOption(MenuOption option);
 
-void CheckAndAddHighScore();
+void CheckAndAddHighScore(int score);
 
 void mainLoop()
 {
@@ -436,8 +438,8 @@ int main(int argc, char* argv[])
 			gameRunning = true;
 		}
 
-			GlobalsInit();
-			ClocksInit();
+		GlobalsInit();
+		ClocksInit();
 
 		while (gameRunning) {
 			mainLoop();
@@ -518,6 +520,12 @@ void UiInit()
 	shieldPriceText.dstR.h = 40;
 	shieldPriceText.dstR.x = windowWidth / 2 - shieldPriceText.dstR.w / 2;
 	shieldPriceText.dstR.y = buyR.y + 10;
+
+	highScoreTextUI.setText(renderer, robotoF, "50");
+	highScoreTextUI.dstR.w = 100;
+	highScoreTextUI.dstR.h = 40;
+	highScoreTextUI.dstR.x = windowWidth / 2 - shieldPriceText.dstR.w / 2;
+	highScoreTextUI.dstR.y = buyR.y + 10;
 
 	buyShieldR.w = 32;
 	buyShieldR.h = 32;
@@ -659,8 +667,8 @@ void InputEvents(const SDL_Event& event)
 	else if (event.type == SDL_TEXTINPUT)
 	{
 		//Not copy or pasting
-		if (!(SDL_GetModState() & KMOD_CTRL && (event.text.text[0] == 'c' || event.text.text[0] == 'C' || event.text.text[0] == 'v' || event.text.text[0] == 'V')))
-		{
+		if (!(SDL_GetModState() & KMOD_CTRL && (event.text.text[0] == 'c' || event.text.text[0] == 'C' || event.text.text[0] == 'v' || event.text.text[0] == 'V'))
+			&& event.text.text[0] != ' ' && highScoreInputName.length < 6) {
 			//Append character
 			highScoreInputName += event.text.text;
 			//renderText = true;
@@ -680,8 +688,6 @@ void InputEvents(const SDL_Event& event)
 		buttons[event.button.button] = true;
 		if (gameOver) {
 			buttons[event.button.button] = false;
-
-			CheckAndAddHighScore();
 
 			// Game is over, so you can only interact with the menu on button clicks
 			for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
@@ -1341,6 +1347,8 @@ void RenderGameOverMenu(TTF_Font* font)
 	SDL_SetRenderDrawColor(renderer, 60, 60, 60, 150);
 	SDL_RenderFillRectF(renderer, &gameOverContainer);
 	gameOverTitleText.draw(renderer);
+	
+	CheckAndAddHighScore(std::stoi(killPointsText.text));
 
 	for (int i = 0; i < GAMEOVER_NUM_OPTIONS; ++i) {
 		if (gameOverOptions[i].selected) {
@@ -1596,15 +1604,31 @@ void HandleMenuOption(MenuOption option)
 	}
 }
 
-void CheckAndAddHighScore() {
-	//Allocation
-	std::tuple<int, std::string> scores[HIGH_SCORES_LIMIT];
-	//Get the array of scores
-	HighScores::ReadScores(scores);
-	for (size_t i = 0; i < HIGH_SCORES_LIMIT; i++) {
-		std::cout << std::get<1>(scores[i]) << ", " << std::get<0>(scores[i]) << std::endl;
-		//delete the heap allocated string
-		//delete std::get<1>(scores);
+void CheckAndAddHighScore(int score) {
+	int indexToInsert = -1;
+	if (!addingScore) {
+		//Allocation
+		std::tuple<int, std::string> scores[HIGH_SCORES_LIMIT];
+		//Get the array of scores
+		HighScores::ReadScores(scores);
+		for (size_t i = 0; i < HIGH_SCORES_LIMIT; i++) {
+			int indexedScore = std::get<0>(scores[i]);
+			//Check if the score is bigger than the current one
+			if (score > indexedScore) {
+				//Ask for the name of the player, and set it to a new tuple with the score
+				addingScore = true;
+				indexToInsert = i;
+			}
+			std::cout << std::get<1>(scores[i]) << ", " << indexedScore << std::endl;
+		}
 	}
+	else {
+		SDL_StartTextInput();
+		highScoreTextUI.setText(renderer, robotoF, highScoreInputName, { 255, 255, 255 });
+		highScoreTextUI.draw(renderer);
+		//scores[i] = std::make_tuple(score, highScoreInputName);
+	}
+
+
 }
 #pragma endregion
