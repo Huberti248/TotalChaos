@@ -26,7 +26,8 @@ enum class MenuOption {
 	Controls,
 	Highscores,
 	Main,
-	Quit
+	Quit,
+	Credits,
 };
 
 void CalculateButtonPosition(

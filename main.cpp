@@ -1,6 +1,11 @@
 #include "SdlDefinitions.h"
 #include "AudioManager.h"
 
+enum class State {
+    Gameplay,
+    Credits,
+};
+
 Player player;
 SDL_Texture* playerT;
 SDL_Texture* bgT;
@@ -93,6 +98,7 @@ SDL_FRect buyShotgunR;
 SDL_FRect buyShotgunBtnR;
 bool buyingShotgun = false;
 bool hasShotgun = false;
+State state = State::Gameplay;
 
 void WindowInit();
 
@@ -149,128 +155,218 @@ void mainLoop()
     extendedWindowR.x = -5;
     extendedWindowR.y = -5;
 
-    while (SDL_PollEvent(&event)) {
-        InputEvents(event);
-    }
-    if (!buyingShield && !buyingShotgun && !pausing && !gameOver) {
-        player.dx = 0;
-        player.dy = 0;
-        if (keys[SDL_SCANCODE_A]) {
-            player.dx = -1;
+    if (state == State::Gameplay) {
+        while (SDL_PollEvent(&event)) {
+            InputEvents(event);
         }
-        else if (keys[SDL_SCANCODE_D]) {
-            player.dx = 1;
-        }
-        if (keys[SDL_SCANCODE_W]) {
-            player.dy = -1;
-        }
-        else if (keys[SDL_SCANCODE_S]) {
-            player.dy = 1;
-        }
-        if (buttons[SDL_BUTTON_LEFT]) {
-            FireWhenReady();
-        }
-        if (buttons[SDL_BUTTON_RIGHT] && player.hasBomb) {
-            //If you have a bomb destroy every bullet and enemy within a radius
-            for (size_t i = 0; i < bullets.size(); i++) {
-                //Don't destroy the player's bullets
-                if (bullets[i].GetTargetMask() == TargetMask::EnemiesMask)
-                    continue;
-                //Check if the bullet is within the radius
-                SDL_FPoint playerPos = {
-                    player.r.x,
-                    player.r.y
-                };
+        if (!buyingShield && !buyingShotgun && !pausing && !gameOver) {
+            player.dx = 0;
+            player.dy = 0;
+            if (keys[SDL_SCANCODE_A]) {
+                player.dx = -1;
+            }
+            else if (keys[SDL_SCANCODE_D]) {
+                player.dx = 1;
+            }
+            if (keys[SDL_SCANCODE_W]) {
+                player.dy = -1;
+            }
+            else if (keys[SDL_SCANCODE_S]) {
+                player.dy = 1;
+            }
+            if (buttons[SDL_BUTTON_LEFT]) {
+                FireWhenReady();
+            }
+            if (buttons[SDL_BUTTON_RIGHT] && player.hasBomb) {
+                //If you have a bomb destroy every bullet and enemy within a radius
+                for (size_t i = 0; i < bullets.size(); i++) {
+                    //Don't destroy the player's bullets
+                    if (bullets[i].GetTargetMask() == TargetMask::EnemiesMask)
+                        continue;
+                    //Check if the bullet is within the radius
+                    SDL_FPoint playerPos = {
+                        player.r.x,
+                        player.r.y
+                    };
 
-                SDL_FPoint bulletPos = {
-                    bullets[i].r.x,
-                    bullets[i].r.y
-                };
+                    SDL_FPoint bulletPos = {
+                        bullets[i].r.x,
+                        bullets[i].r.y
+                    };
 
-                float sqrDis = MathUtils::DistanceSqr(bulletPos, playerPos);
+                    float sqrDis = MathUtils::DistanceSqr(bulletPos, playerPos);
 
-                if (sqrDis > (BOMB_RADIUS * BOMB_RADIUS))
-                    continue;
-                bullets.erase(bullets.begin() + i--); //Destroy the bullet if it is within the radius
+                    if (sqrDis > (BOMB_RADIUS * BOMB_RADIUS))
+                        continue;
+                    bullets.erase(bullets.begin() + i--); //Destroy the bullet if it is within the radius
+                }
+
+                for (size_t i = 0; i < enemies.size(); i++) {
+                    SDL_FPoint playerPos = {
+                        player.r.x,
+                        player.r.y
+                    };
+
+                    SDL_FPoint enemyPos = {
+                        enemies[i].r.x,
+                        enemies[i].r.y
+                    };
+
+                    float sqrDis = MathUtils::DistanceSqr(enemyPos, playerPos);
+
+                    if (sqrDis > (BOMB_RADIUS * BOMB_RADIUS))
+                        continue;
+                    enemies.erase(enemies.begin() + i--); //Destroy the enemy if it is within the radius
+                    audioManager->PlaySFX(SFXAudio::EnemyDeath);
+                }
+
+                //Reset the player's streak
+                //TODO: Make this a function on the getters and setters of hasBomb
+                player.streak = 0;
+                player.hasBomb = false;
             }
 
-            for (size_t i = 0; i < enemies.size(); i++) {
-                SDL_FPoint playerPos = {
-                    player.r.x,
-                    player.r.y
-                };
+            EnemySpawn();
 
-                SDL_FPoint enemyPos = {
-                    enemies[i].r.x,
-                    enemies[i].r.y
-                };
+            EntityMovement(extendedWindowR, deltaTime);
 
-                float sqrDis = MathUtils::DistanceSqr(enemyPos, playerPos);
+            BulletCollisions(extendedWindowR, deltaTime);
 
-                if (sqrDis > (BOMB_RADIUS * BOMB_RADIUS))
-                    continue;
-                enemies.erase(enemies.begin() + i--); //Destroy the enemy if it is within the radius
-                audioManager->PlaySFX(SFXAudio::EnemyDeath);
+            EnemyBehavior(extendedWindowR, deltaTime);
+
+            PowerUpSpawner();
+            //To Review (more than one portal at a time)
+            if (portalClock.getElapsedTime() > PORTAL_SPAWN_DELAY_IN_MS && portalRects.size() < 1) {
+                portalRects.push_back(SDL_FRect());
+                portalRects.back().w = 32;
+                portalRects.back().h = 32;
+                portalRects.back().x = random(0, windowWidth - portalRects.back().w);
+                portalRects.back().y = random(0, windowHeight - portalRects.back().h);
+                portalRects.push_back(SDL_FRect());
+                portalRects.back().w = 32;
+                portalRects.back().h = 32;
+                portalRects.back().x = random(0, windowWidth - portalRects.back().w);
+                portalRects.back().y = random(0, windowHeight - portalRects.back().h);
+                portalClock.restart();
             }
-
-            //Reset the player's streak
-            //TODO: Make this a function on the getters and setters of hasBomb
-            player.streak = 0;
-            player.hasBomb = false;
-        }
-
-        EnemySpawn();
-
-        EntityMovement(extendedWindowR, deltaTime);
-
-        BulletCollisions(extendedWindowR, deltaTime);
-
-        EnemyBehavior(extendedWindowR, deltaTime);
-
-        PowerUpSpawner();
-        //To Review (more than one portal at a time)
-        if (portalClock.getElapsedTime() > PORTAL_SPAWN_DELAY_IN_MS && portalRects.size() < 1) {
-            portalRects.push_back(SDL_FRect());
-            portalRects.back().w = 32;
-            portalRects.back().h = 32;
-            portalRects.back().x = random(0, windowWidth - portalRects.back().w);
-            portalRects.back().y = random(0, windowHeight - portalRects.back().h);
-            portalRects.push_back(SDL_FRect());
-            portalRects.back().w = 32;
-            portalRects.back().h = 32;
-            portalRects.back().x = random(0, windowWidth - portalRects.back().w);
-            portalRects.back().y = random(0, windowHeight - portalRects.back().h);
-            portalClock.restart();
-        }
-        for (int i = 0; i < portalRects.size(); ++i) {
-            if (SDL_HasIntersectionF(&player.r, &portalRects[i])) {
-                if (i % 2 != 0) {
-                    player.r.x = portalRects[i - 1].x;
-                    player.r.y = portalRects[i - 1].y;
-                }
-                else {
-                    player.r.x = portalRects[i + 1].x;
-                    player.r.y = portalRects[i + 1].y;
-                }
-                if (i % 2 != 0) {
-                    portalRects.erase(portalRects.begin() + i--);
-                    portalRects.erase(portalRects.begin() + i);
-                    portalClock.restart(); // To review
-                }
-                else {
-                    portalRects.erase(portalRects.begin() + i);
-                    portalRects.erase(portalRects.begin() + i--);
-                    portalClock.restart(); // To review
+            for (int i = 0; i < portalRects.size(); ++i) {
+                if (SDL_HasIntersectionF(&player.r, &portalRects[i])) {
+                    if (i % 2 != 0) {
+                        player.r.x = portalRects[i - 1].x;
+                        player.r.y = portalRects[i - 1].y;
+                    }
+                    else {
+                        player.r.x = portalRects[i + 1].x;
+                        player.r.y = portalRects[i + 1].y;
+                    }
+                    if (i % 2 != 0) {
+                        portalRects.erase(portalRects.begin() + i--);
+                        portalRects.erase(portalRects.begin() + i);
+                        portalClock.restart(); // To review
+                    }
+                    else {
+                        portalRects.erase(portalRects.begin() + i);
+                        portalRects.erase(portalRects.begin() + i--);
+                        portalClock.restart(); // To review
+                    }
                 }
             }
         }
-    }
 
-    if (player.GetHealth() <= 0 && !gameOver) {
-        gameOver = true;
-        pauseMosPos = mousePos;
+        if (player.GetHealth() <= 0 && !gameOver) {
+            gameOver = true;
+            pauseMosPos = mousePos;
+        }
+        RenderAll();
     }
-    RenderAll();
+    else if (state == State::Credits) {
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT || event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
+                gameRunning = false;
+                // TODO: On mobile remember to use eventWatch function (it doesn't reach this code when terminating)
+            }
+            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                SDL_RenderSetScale(renderer, event.window.data1 / (float)windowWidth, event.window.data2 / (float)windowHeight);
+            }
+            if (event.type == SDL_KEYDOWN) {
+                keys[event.key.keysym.scancode] = true;
+            }
+            if (event.type == SDL_KEYUP) {
+                keys[event.key.keysym.scancode] = false;
+            }
+            if (event.type == SDL_MOUSEBUTTONDOWN) {
+                buttons[event.button.button] = true;
+            }
+            if (event.type == SDL_MOUSEBUTTONUP) {
+                buttons[event.button.button] = false;
+            }
+            if (event.type == SDL_MOUSEMOTION) {
+                float scaleX, scaleY;
+                SDL_RenderGetScale(renderer, &scaleX, &scaleY);
+                mousePos.x = event.motion.x / scaleX;
+                mousePos.y = event.motion.y / scaleY;
+                realMousePos.x = event.motion.x;
+                realMousePos.y = event.motion.y;
+            }
+        }
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+        SDL_RenderClear(renderer);
+        Text authorsText;
+        authorsText.dstR.w = 140;
+        authorsText.dstR.h = 40;
+        authorsText.dstR.x = windowWidth / 2 - authorsText.dstR.w / 2;
+        authorsText.dstR.y = 0;
+        authorsText.setText(renderer, robotoF, "Game authors:");
+        authorsText.draw(renderer);
+        std::vector<Text> authors;
+        authors.push_back(Text());
+        authors.back().setText(renderer, robotoF, "Huberti");
+        authors.back().dstR.w = 100;
+        authors.back().dstR.h = 40;
+        authors.back().dstR.x = windowWidth / 2 - authors.back().dstR.w / 2;
+        authors.back().dstR.y = authorsText.dstR.y + authorsText.dstR.h;
+        authors.push_back(authors.back());
+        authors.back().setText(renderer, robotoF, "Kyn21kx");
+        authors.back().dstR.y = authors[authors.size() - 2].dstR.y + authors[authors.size() - 2].dstR.h;
+        authors.push_back(authors.back());
+        authors.back().setText(renderer, robotoF, "ajyang2000");
+        authors.back().dstR.y = authors[authors.size() - 2].dstR.y + authors[authors.size() - 2].dstR.h;
+        authors.push_back(authors.back());
+        authors.back().setText(renderer, robotoF, "Altimerra");
+        authors.back().dstR.y = authors[authors.size() - 2].dstR.y + authors[authors.size() - 2].dstR.h;
+        authors.push_back(authors.back());
+        authors.back().setText(renderer, robotoF, "MalgorzataMika");
+        authors.back().dstR.w = 140;
+        authors.back().dstR.y = authors[authors.size() - 2].dstR.y + authors[authors.size() - 2].dstR.h;
+        Text externalGraphicsText;
+        externalGraphicsText.setText(renderer, robotoF, "External graphics:");
+        externalGraphicsText.dstR.w = 140;
+        externalGraphicsText.dstR.h = 40;
+        externalGraphicsText.dstR.x = windowWidth / 2 - externalGraphicsText.dstR.w / 2;
+        externalGraphicsText.dstR.y = authors.back().dstR.y + authors.back().dstR.h;
+        externalGraphicsText.draw(renderer);
+        std::vector<Text> egAuthorsTexts;
+        egAuthorsTexts.push_back(Text());
+        egAuthorsTexts.back().setText(renderer, robotoF, "Gumichan01");
+        egAuthorsTexts.back().dstR.w = 100;
+        egAuthorsTexts.back().dstR.h = 40;
+        egAuthorsTexts.back().dstR.x = windowWidth / 2 - egAuthorsTexts.back().dstR.w / 2;
+        egAuthorsTexts.back().dstR.y = externalGraphicsText.dstR.y + externalGraphicsText.dstR.h;
+        egAuthorsTexts.push_back(egAuthorsTexts.back());
+        egAuthorsTexts.back().setText(renderer, robotoF, "Skorpio");
+        egAuthorsTexts.back().dstR.y = egAuthorsTexts[egAuthorsTexts.size() - 2].dstR.y + egAuthorsTexts[egAuthorsTexts.size() - 2].dstR.h;
+        egAuthorsTexts.push_back(egAuthorsTexts.back());
+        egAuthorsTexts.back().setText(renderer, robotoF, "Freepik");
+        egAuthorsTexts.back().dstR.y = egAuthorsTexts[egAuthorsTexts.size() - 2].dstR.y + egAuthorsTexts[egAuthorsTexts.size() - 2].dstR.h;
+        for (int i = 0; i < authors.size(); ++i) {
+            authors[i].draw(renderer);
+        }
+        for (int i = 0; i < egAuthorsTexts.size(); ++i) {
+            egAuthorsTexts[i].draw(renderer);
+        }
+        SDL_RenderPresent(renderer);
+    }
 }
 
 void GlobalsInit()
@@ -324,10 +420,6 @@ int main(int argc, char* argv[])
     PauseInit(robotoF);
     GameOverInit(robotoF);
 
-    MenuOption buttonType = displayMainMenu(renderer, robotoF, &realMousePos);
-    if (buttonType == MenuOption::Quit) {
-        gameRunning = false;
-    }
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(mainLoop, 0, 1);
 #else
@@ -1102,10 +1194,10 @@ void FireWhenReady()
 #pragma region Menu Functions
 MenuOption DisplayMainMenu(TTF_Font* font)
 {
-    const int NUMMENU = 2;
+    const int NUMMENU = 3;
     MenuButton buttons[NUMMENU];
-    const std::string labels[NUMMENU] = { "Play", "Exit" };
-    const MenuOption menuTypes[NUMMENU] = { MenuOption::Play, MenuOption::Quit };
+    const std::string labels[NUMMENU] = { "Play", "Credits", "Exit" };
+    const MenuOption menuTypes[NUMMENU] = { MenuOption::Play, MenuOption::Credits, MenuOption::Quit };
     SDL_Color color[2] = { { 255, 255, 255 }, { 255, 0, 0 } };
 
     // Setup background and title
@@ -1307,6 +1399,11 @@ void HandleMenuOption(MenuOption option)
     case MenuOption::Play:
         gameRunning = true;
         audioManager->PlayMusic(MusicAudio::Background);
+        state = State::Gameplay;
+        break;
+    case MenuOption::Credits:
+        gameRunning = true;
+        state = State::Credits;
         break;
     case MenuOption::Restart:
         restart = true;
