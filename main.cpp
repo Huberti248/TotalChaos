@@ -267,7 +267,7 @@ void UiInit()
     moneyR.x = windowWidth - moneyR.w;
     moneyR.y = healthText.dstR.y + healthText.dstR.h;
 
-    moneyText.setText(renderer, robotoF, 100);
+    moneyText.setText(renderer, robotoF, 0);
     moneyText.dstR.w = 30;
     moneyText.dstR.h = 20;
     moneyText.dstR.x = moneyR.x - moneyText.dstR.w;
