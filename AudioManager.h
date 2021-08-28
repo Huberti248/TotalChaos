@@ -7,6 +7,7 @@
 #include <vector>
 
 #define VOLUME 100
+#define MUSIC_VOLUME 70
 #define MAX_CHANNELS 25
 
 enum class MusicAudio {
@@ -14,11 +15,16 @@ enum class MusicAudio {
 };
 
 enum class SFXAudio {
-	UI = 0,
+	UISuccess = 0,
+	UIFail,
+	MenuSuccess,
+	MenuFail,
+	EnemyHit,
 	EnemyDeath,
-	PlayerFire,
 	EnemyFire,
-	PlayerHit
+	PlayerDeath,
+	PlayerFire1,
+	PlayerFire2
 };
 
 
