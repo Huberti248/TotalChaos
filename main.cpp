@@ -15,6 +15,8 @@ SDL_Texture* closeT;
 SDL_Texture* coinsT;
 SDL_Texture* uiSelectedT;
 SDL_Texture* portalT;
+SDL_Texture* weaponPlanetT;
+SDL_Texture* shotgunT;
 Clock globalClock;
 std::vector<Bullet> bullets;
 Clock bulletClock;
@@ -26,7 +28,7 @@ std::vector<Entity> planets;
 Clock planetClock;
 std::vector<Entity> healthPickups;
 Clock healthPickupClock;
-bool buying = false;
+bool buyingShield = false;
 Text shieldPriceText;
 Text shieldText;
 Text shieldHealthText;
@@ -42,6 +44,12 @@ SDL_FRect closeBtnR;
 int healthSpawnTime = 0;
 std::vector<SDL_FRect> portalRects;
 Clock portalClock;
+Text shotgunPriceText;
+Text shotgunText;
+SDL_FRect buyShotgunR;
+SDL_FRect buyShotgunBtnR;
+bool buyingShotgun = false;
+bool hasShotgun = false;
 
 void WindowInit();
 
@@ -87,7 +95,7 @@ void mainLoop()
     while (SDL_PollEvent(&event)) {
         InputEvents(event);
     }
-    if (!buying) {
+    if (!buyingShield && !buyingShotgun) {
         player.dx = 0;
         player.dy = 0;
         if (keys[SDL_SCANCODE_A]) {
@@ -197,6 +205,8 @@ void TexturesInit()
     coinsT = IMG_LoadTexture(renderer, "res/coins.png");
     uiSelectedT = IMG_LoadTexture(renderer, "res/player.png");
     portalT = IMG_LoadTexture(renderer, "res/portal.png");
+    weaponPlanetT = IMG_LoadTexture(renderer, "res/weaponPlanet.png");
+    shotgunT = IMG_LoadTexture(renderer, "res/shotgun.png");
 }
 
 void UiInit()
@@ -257,7 +267,7 @@ void UiInit()
     moneyR.x = windowWidth - moneyR.w;
     moneyR.y = healthText.dstR.y + healthText.dstR.h;
 
-    moneyText.setText(renderer, robotoF, 0);
+    moneyText.setText(renderer, robotoF, 100);
     moneyText.dstR.w = 30;
     moneyText.dstR.h = 20;
     moneyText.dstR.x = moneyR.x - moneyText.dstR.w;
@@ -267,6 +277,16 @@ void UiInit()
     shieldPrizeCoinsR.h = 32;
     shieldPrizeCoinsR.x = shieldPriceText.dstR.x + shieldPriceText.dstR.w;
     shieldPrizeCoinsR.y = shieldPriceText.dstR.y;
+
+    shotgunPriceText = shieldPriceText;
+    shotgunPriceText.setText(renderer, robotoF, 100);
+
+    shotgunText = shieldText;
+    shotgunText.setText(renderer, robotoF, "Shotgun");
+
+    buyShotgunR = buyShotgunBtnR;
+
+    buyShotgunBtnR = buyBtnR;
 }
 
 void ClocksInit()
@@ -437,10 +457,11 @@ void InputEvents(const SDL_Event& event)
     }
     if (event.type == SDL_MOUSEBUTTONDOWN) {
         buttons[event.button.button] = true;
-        if (SDL_PointInFRect(&mousePos, &closeBtnR) && buying) {
-            buying = false;
+        if (SDL_PointInFRect(&mousePos, &closeBtnR) && (buyingShield || buyingShotgun)) {
+            buyingShield = false;
+            buyingShotgun = false;
         }
-        if (SDL_PointInFRect(&mousePos, &buyBtnR) && buying) {
+        if (SDL_PointInFRect(&mousePos, &buyBtnR) && buyingShield) {
             if (std::stoi(moneyText.text) >= std::stoi(shieldPriceText.text)) {
                 hasShield = true;
                 shieldHealth = 10;
@@ -449,6 +470,12 @@ void InputEvents(const SDL_Event& event)
                 shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
 #endif
                 moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shieldPriceText.text));
+            }
+        }
+        if (SDL_PointInFRect(&mousePos, &buyShotgunBtnR) && buyingShotgun) {
+            if (std::stoi(moneyText.text) >= std::stoi(shotgunPriceText.text)) {
+                hasShotgun = true;
+                moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shotgunPriceText.text));
             }
         }
     }
@@ -526,7 +553,12 @@ void EntityMovement(const SDL_FRect& extendedWindowR, float deltaTime)
         planets[i].r.x += planets[i].dx * deltaTime * PLANET_SPEED;
         planets[i].r.y += planets[i].dy * deltaTime * PLANET_SPEED;
         if (SDL_HasIntersectionF(&player.r, &planets[i].r)) {
-            buying = true;
+            if (planets[i].planetType == PlanetType::Shield) {
+                buyingShield = true;
+            }
+            else if (planets[i].planetType == PlanetType::Weapon) {
+                buyingShotgun = true;
+            }
         }
         if (SDL_HasIntersectionF(&player.r, &planets[i].r)
             || !SDL_HasIntersectionF(&planets[i].r, &extendedWindowR)) {
@@ -657,6 +689,12 @@ void PowerUpSpawner()
         planets.back().r.x = random(0, windowWidth - planets.back().r.w);
         planets.back().r.y = -planets.back().r.h;
         planets.back().dy = 1;
+        if (!hasShotgun) {
+            planets.back().planetType = (PlanetType)random(0, 1);
+        }
+        else {
+            planets.back().planetType = (PlanetType)random(0, 0);
+        }
         planetClock.restart();
     }
 
@@ -716,7 +754,12 @@ void RenderAll()
 
     //Renders planets
     for (int i = 0; i < planets.size(); ++i) {
-        SDL_RenderCopyF(renderer, planetT, 0, &planets[i].r);
+        if (planets[i].planetType == PlanetType::Shield) {
+            SDL_RenderCopyF(renderer, planetT, 0, &planets[i].r);
+        }
+        else if (planets[i].planetType == PlanetType::Weapon) {
+            SDL_RenderCopyF(renderer, weaponPlanetT, 0, &planets[i].r);
+        }
     }
 
     //Renders meat
@@ -728,7 +771,7 @@ void RenderAll()
     for (int i = 0; i < portalRects.size(); ++i) {
         SDL_RenderCopyF(renderer, portalT, 0, &portalRects[i]);
     }
-    if (buying) {
+    if (buyingShield) {
         SDL_SetRenderDrawColor(renderer, 125, 125, 125, 0);
         SDL_RenderFillRectF(renderer, &buyR);
         shieldPriceText.draw(renderer);
@@ -737,6 +780,15 @@ void RenderAll()
         SDL_RenderCopyF(renderer, shieldT, 0, &buyShieldR);
         SDL_RenderCopyF(renderer, closeT, 0, &closeBtnR);
         SDL_RenderCopyF(renderer, coinsT, 0, &shieldPrizeCoinsR);
+    }
+    if (buyingShotgun) {
+        SDL_SetRenderDrawColor(renderer, 125, 125, 125, 0);
+        SDL_RenderFillRectF(renderer, &buyR);
+        shotgunPriceText.draw(renderer);
+        shotgunText.draw(renderer);
+        SDL_RenderCopyF(renderer, shotgunT, 0, &buyShotgunR);
+        SDL_RenderCopyF(renderer, closeT, 0, &closeBtnR);
+        SDL_RenderCopyF(renderer, buyT, 0, &buyShotgunBtnR);
     }
     SDL_RenderPresent(renderer);
 }
@@ -764,6 +816,14 @@ void FireWhenReady()
 
         bullets.back().dy = finalPos.y;
         bullets.back().dx = finalPos.x;
+
+        if (hasShotgun) {
+            bullets.push_back(bullets.back());
+            bullets.back().dx += randomF(-0.5, 0);
+            bullets.push_back(bullets.back());
+            bullets.back().dx += randomF(0, 0.5);
+        }
+
         bulletClock.restart();
     }
 }

@@ -11,6 +11,11 @@ int random(int min, int max)
     return min + rand() % ((max + 1) - min);
 }
 
+float randomF(float M, float N)
+{
+    return M + (rand() / (RAND_MAX / (N - M)));
+}
+
 int SDL_QueryTextureF(SDL_Texture* texture, Uint32* format, int* access, float* w, float* h)
 {
     int wi, hi;
