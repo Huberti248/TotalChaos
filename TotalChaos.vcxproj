@@ -94,6 +94,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AudioManager.cpp" />
     <ClCompile Include="Bullet.cpp" />
     <ClCompile Include="Crypto.cpp" />
     <ClCompile Include="Enemy.cpp" />
@@ -107,6 +108,7 @@
     <ClCompile Include="vendor\PUGIXML\src\pugixml.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AudioManager.h" />
     <ClInclude Include="Bullet.h" />
     <ClInclude Include="Clock.h" />
     <ClInclude Include="Crypto.h" />

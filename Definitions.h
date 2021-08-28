@@ -47,6 +47,8 @@ using namespace std::chrono_literals;
 #include <emscripten/html5.h>
 #endif
 
+//#include "Audio.h"
+#include "AudioManager.h"
 #include "MathUtils.h"
 #include "Movement.h"
 #include "Menu.h"

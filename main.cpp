@@ -1,4 +1,5 @@
 #include "SdlDefinitions.h"
+#include "AudioManager.h"
 
 Player player;
 SDL_Texture* playerT;
@@ -83,7 +84,7 @@ float gameOverLargest;
 bool gameOver = false;
 bool restart = false;
 float playerHealth;
-
+AudioManager* audioManager = AudioManager::Instance();
 
 void WindowInit();
 
@@ -197,6 +198,7 @@ void mainLoop()
 
 				if (sqrDis > (BOMB_RADIUS * BOMB_RADIUS)) continue;
 				enemies.erase(enemies.begin() + i--); //Destroy the enemy if it is within the radius
+                audioManager->PlaySFX(SFXAudio::EnemyDeath);
 			}
 
 			//Reset the player's streak
@@ -440,6 +442,7 @@ void WindowInit()
     SDL_LogSetOutputFunction(logOutputCallback, 0);
     SDL_Init(SDL_INIT_EVERYTHING);
     TTF_Init();
+    //Mix_OpenAudio(AUDIO_FREQUENCY, MIX_DEFAULT_FORMAT, AUDIO_NUM_CHANNELS, AUDIO_CHUNK_SIZE);
     SDL_GetMouseState(&mousePos.x, &mousePos.y);
     window = SDL_CreateWindow("TotalChaos", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_RESIZABLE);
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
@@ -494,6 +497,8 @@ void InputEvents(const SDL_Event& event)
             pausing = !pausing;
             pauseKeyHeld = true;
             pauseMosPos = mousePos;
+
+            pausing ? audioManager->PauseMusic() : audioManager->ResumeMusic();
         }
         keys[event.key.keysym.scancode] = true;
     }
@@ -510,6 +515,7 @@ void InputEvents(const SDL_Event& event)
             // Game is over, so you can only interact with the menu on button clicks
             for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
                 if (SDL_PointInFRect(&mousePos, &gameOverOptions[i].buttonText.dstR)) {
+                    audioManager->PlaySFX(SFXAudio::UI);
                     HandleMenuOption(gameOverOptions[i].menuType);
                 }
             }
@@ -519,6 +525,7 @@ void InputEvents(const SDL_Event& event)
             // Game is paused, so you can only interact with the menu on button clicks
             for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
                 if (SDL_PointInFRect(&mousePos, &pauseOptions[i].buttonText.dstR)) {
+                    audioManager->PlaySFX(SFXAudio::UI);
                     HandleMenuOption(pauseOptions[i].menuType);
                 }
             }
@@ -700,6 +707,7 @@ deleteCollidingBegin:
                     BounceOff(&bullets[i], &player, false);
                 }
                 else {
+                    audioManager->PlaySFX(SFXAudio::PlayerHit);
                     player.SetHealth(player.GetHealth() - 1);
                     bullets.erase(bullets.begin() + i--);
                     healthText.setText(renderer, robotoF, player.GetHealth(), { 255, 0, 0 });
@@ -715,6 +723,7 @@ deleteCollidingBegin:
 				continue;
 			if (SDL_HasIntersectionF(&bullets[i].r, &enemies[j].r)) {
 				player.streak++;
+                audioManager->PlaySFX(SFXAudio::EnemyDeath);
 				enemies.erase(enemies.begin() + j--);
 				bullets.erase(bullets.begin() + i--);
 				killPointsText.setText(renderer, robotoF, std::stoi(killPointsText.text) + 1);
@@ -899,6 +908,7 @@ void RenderAll()
 void FireWhenReady()
 {
     if (bulletClock.getElapsedTime() > BULLET_SPAWN_DELAY_IN_MS) {
+        audioManager->PlaySFX(SFXAudio::PlayerFire);
         //TODO: Encapsulate this in a function (and probably a different file)
         bullets.push_back(Bullet(TargetMask::EnemiesMask));
         bullets.back().r.w = 32;
@@ -997,6 +1007,7 @@ MenuOption DisplayMainMenu(TTF_Font* font)
             case SDL_MOUSEBUTTONDOWN:
                 for (int i = 0; i < NUMMENU; ++i) {
                     if (SDL_PointInFRect(&mousePos, &buttons[i].buttonText.dstR)) {
+                        audioManager->PlaySFX(SFXAudio::UI);
                         return buttons[i].menuType;
                     }
                 }
@@ -1125,14 +1136,18 @@ void HandleMenuOption(MenuOption option) {
     switch (option) {
         case MenuOption::Play:
             gameRunning = true;
+            audioManager->PlayMusic(MusicAudio::Background);
             break;
         case MenuOption::Restart:
             restart = true;
             gameRunning = false;
+            audioManager->StopMusic();
+            audioManager->PlayMusic(MusicAudio::Background);
             break;
         case MenuOption::Resume:
             pausing = false;
             pauseKeyHeld = false;
+            audioManager->ResumeMusic();
             break;
         case MenuOption::Controls:
             gameRunning = false;
@@ -1143,10 +1158,13 @@ void HandleMenuOption(MenuOption option) {
         case MenuOption::Main:
             gameRunning = false;
             restart = false;
+            audioManager->StopMusic();
             break;
         case MenuOption::Quit:
             gameRunning = false;
             appRunning = false;
+            audioManager->StopMusic();
+            audioManager->Release();
             break;
     }
 }
