@@ -48,6 +48,7 @@ Text shieldHealthText;
 Text killStreakText;
 Text bombText;
 Text highScoreTextUI;
+Text shotgunAmmoText;
 SDL_FRect buyBtnR;
 SDL_FRect buyR;
 SDL_FRect buyShieldR;
@@ -171,6 +172,8 @@ void HandleMenuOption(MenuOption option);
 void CheckAndAddHighScore(int score);
 
 void ScoreKill();
+
+void ShiftScores(const std::tuple<int, std::string>& toInsert);
 
 void mainLoop()
 {
@@ -517,16 +520,24 @@ void UiInit()
 	
 	killStreakText.dstR.w = 60;
 	killStreakText.dstR.h = 30;
-	killStreakText.dstR.x = windowWidth / 4 - shieldPriceText.dstR.w / 4;
+	killStreakText.dstR.x = windowWidth / 4 - killStreakText.dstR.w / 4;
 	killStreakText.dstR.y = 0;
 	std::string streakText = "Kill streak: " + std::to_string(player.streak);
 	killStreakText.setText(renderer, robotoF, streakText, { 255, 255, 255 });
 
-	bombText.dstR.w = 100;
+
+	bombText.dstR.w = 120;
 	bombText.dstR.h = 30;
 	bombText.dstR.x = windowWidth / 7 - shieldPriceText.dstR.w / 7;
 	bombText.dstR.y = 0;
 	bombText.setText(renderer, robotoF, "[LEFT CLICK FOR BOMB]", {255, 0, 0});
+
+	shotgunAmmoText.dstR.w = 100;
+	shotgunAmmoText.dstR.h = 30;
+	shotgunAmmoText.dstR.x = windowWidth / 30 - shieldPriceText.dstR.w / 30;
+	shotgunAmmoText.dstR.y = 0;
+	std::string ammoStr = "Shotgun Ammo: " + std::to_string(player.shotgunAmmo);
+	shotgunAmmoText.setText(renderer, robotoF, ammoStr, { 255, 255, 255 });
 
 	shieldPriceText.setText(renderer, robotoF, "50");
 	shieldPriceText.dstR.w = 100;
@@ -674,11 +685,11 @@ void InputEvents(const SDL_Event& event)
 
 		//Add a score
 		if ((event.key.keysym.sym == SDLK_KP_ENTER || event.key.keysym.sym == SDLK_RETURN) && addingScore && highScoreInputName.length() > 0) {
-			addingScore = false;
-			scoreAdded = true;
-			allScores[indexToInsertHighScore] = std::make_tuple(std::stoi(killPointsText.text), highScoreInputName);
+			ShiftScores(std::make_tuple(std::stoi(killPointsText.text), highScoreInputName));
 			//Send the score to the file 
 			HighScores::WriteHighScore(allScores);
+			addingScore = false;
+			scoreAdded = true;
 		}
 
 		keys[event.key.keysym.scancode] = true;
@@ -1103,6 +1114,7 @@ void RenderAll()
 	killPointsText.draw(renderer);
 	healthText.draw(renderer);
 	killStreakText.draw(renderer);
+	shotgunAmmoText.draw(renderer);
 
 	if (player.hasBomb)
 		bombText.draw(renderer);
@@ -1192,6 +1204,9 @@ void FireWhenReady()
 		if (hasShotgun) {
 			weaponType = SFXAudio::PlayerFire2;
 			player.shotgunAmmo--;
+
+			std::string ammoStr = "Shotgun Ammo: " + std::to_string(player.shotgunAmmo);
+			shotgunAmmoText.setText(renderer, robotoF, ammoStr, { 255, 255, 255 });
 
 			bullets.push_back(bullets.back());
 			float angle = -135.0f * M_PI / 180.0f;
@@ -1655,4 +1670,17 @@ void ScoreKill() {
 		moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 30);
 	}
 	moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 1);
+}
+
+void ShiftScores(const std::tuple<int, std::string>& toInsert) {
+	//Create a temporary tuple holding the previous value of the tuple
+	std::tuple<int, std::string> prev = allScores[indexToInsertHighScore];
+	//Replace the content at the index
+	allScores[indexToInsertHighScore] = toInsert;
+	//Shift the array
+	for (size_t i = indexToInsertHighScore + 1; i < HIGH_SCORES_LIMIT; i++) {
+		if (i == HIGH_SCORES_LIMIT - 1) break;
+		allScores[i] = prev;
+		prev = allScores[i + 1];
+	}
 }

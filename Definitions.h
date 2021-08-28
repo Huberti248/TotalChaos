@@ -88,7 +88,7 @@ using namespace std::chrono_literals;
 #define PORTAL_SPAWN_DELAY_IN_MS 5000
 #define STREAK_BOMB_REQUIREMENT 12
 #define BOMB_RADIUS 500
-#define SHOTGUN_MAX_AMMO 10
+#define SHOTGUN_MAX_AMMO 21
 
 
 SDL_Window* window;
