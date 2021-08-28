@@ -100,6 +100,7 @@ SDL_Point pauseMosPos;
 bool keys[SDL_NUM_SCANCODES];
 bool buttons[SDL_BUTTON_X2 + 1];
 TTF_Font* robotoF;
+TTF_Font* moonhouseF;
 bool gameRunning = true;
 bool appRunning = true;
 std::string ek = "q1YZbqq48XNeV77Egwtk";

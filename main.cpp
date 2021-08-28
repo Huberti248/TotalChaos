@@ -24,6 +24,7 @@ SDL_Texture* uiSelectedT;
 SDL_Texture* portalT;
 SDL_Texture* weaponPlanetT;
 SDL_Texture* shotgunT;
+SDL_Texture* controlsT;
 Clock globalClock;
 std::vector<Bullet> bullets;
 Clock bulletClock;
@@ -53,20 +54,17 @@ SDL_FRect closeBtnR;
 int healthSpawnTime = 0;
 std::vector<SDL_FRect> portalRects;
 Clock portalClock;
+bool menuRunning = false;
 MenuButton pauseOptions[PAUSE_NUM_OPTIONS];
-const std::string pauseLabels[PAUSE_NUM_OPTIONS] = {
-    "Resume",
-    "Controls - TBC",
-    "Highscore - TBC",
-    "Return to Main Menu",
-    "Quit to Desktop"
+const std::string pauseLabels[PAUSE_NUM_OPTIONS] = { 
+    "Resume", 
+    "Return to Main Menu", 
+    "Quit to Desktop" 
 };
-const MenuOption pauseMenuTypes[PAUSE_NUM_OPTIONS] = {
-    MenuOption::Resume,
-    MenuOption::Controls,
-    MenuOption::Highscores,
-    MenuOption::Main,
-    MenuOption::Quit
+const MenuOption pauseMenuTypes[PAUSE_NUM_OPTIONS] = { 
+    MenuOption::Resume,  
+    MenuOption::Main, 
+    MenuOption::Quit 
 };
 Text pauseTitleText;
 SDL_FRect pauseContainer;
@@ -76,13 +74,11 @@ bool pausing = false;
 bool pauseKeyHeld = false;
 MenuButton gameOverOptions[GAMEOVER_NUM_OPTIONS];
 const std::string gameOverLabels[GAMEOVER_NUM_OPTIONS] = {
-    "Play Again",
-    "Highscore - TBC",
+    "Play Again",  
     "Return to Main Menu"
 };
 const MenuOption gameOverMenuTypes[GAMEOVER_NUM_OPTIONS] = {
-    MenuOption::Restart,
-    MenuOption::Highscores,
+    MenuOption::Restart,   
     MenuOption::Main
 };
 Text gameOverTitleText;
@@ -90,6 +86,13 @@ SDL_FRect gameOverContainer;
 float gameOverLargest;
 bool gameOver = false;
 bool restart = false;
+MenuButton controlsOptions;
+const std::string controlsLabel = "Return";
+MenuOption controlsMenuType = MenuOption::Main;
+Text controlsTitleText;
+SDL_FRect controlsTitleContainer;
+SDL_FRect controlsOptionContainer;
+bool controlsMenu = false;
 float playerHealth;
 AudioManager* audioManager = AudioManager::Instance();
 Text shotgunPriceText;
@@ -106,6 +109,8 @@ void GlobalsInit();
 
 void mainLoop();
 
+void menuMainLoop();
+
 void TexturesInit();
 
 void UiInit();
@@ -113,8 +118,6 @@ void UiInit();
 void ClocksInit();
 
 void BounceOff(Entity* a, Entity* b, bool affectB);
-
-MenuOption displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Point* mousePosMenu);
 
 void InputEvents(const SDL_Event& event);
 
@@ -132,15 +135,19 @@ void RenderAll();
 
 void FireWhenReady();
 
-MenuOption DisplayMainMenu(TTF_Font* font);
+MenuOption DisplayMainMenu(TTF_Font* titleFont, TTF_Font* font);
 
 void RenderPauseMenu(TTF_Font* font);
 
-void PauseInit(TTF_Font* font);
+void PauseInit(TTF_Font* titleFont, TTF_Font* font);
 
 void RenderGameOverMenu(TTF_Font* font);
 
-void GameOverInit(TTF_Font* font);
+void GameOverInit(TTF_Font* titleFont, TTF_Font* font);
+
+void RenderControlsMenu(TTF_Font* font);
+
+void ControlsInit(TTF_Font* titleFont, TTF_Font* font);
 
 void HandleMenuOption(MenuOption option);
 
@@ -408,35 +415,43 @@ int main(int argc, char* argv[])
     WindowInit();
     TexturesInit();
 
-    player.r.w = 32;
-    player.r.h = 32;
+    player.r.w = 64;
+    player.r.h = 64;
     playerHealth = player.GetHealth();
 
     uiSelector.w = 32;
     uiSelector.h = 32;
 
     UiInit();
+    PauseInit(moonhouseF, robotoF);
+    GameOverInit(moonhouseF, robotoF);
+    ControlsInit(moonhouseF, robotoF);
     ClocksInit();
-    PauseInit(robotoF);
-    GameOverInit(robotoF);
 
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(mainLoop, 0, 1);
 #else
     while (appRunning) {
         if (!restart) {
-            MenuOption buttonType = DisplayMainMenu(robotoF);
+            MenuOption buttonType = DisplayMainMenu(moonhouseF, robotoF);
             HandleMenuOption(buttonType);
         }
         else {
             gameRunning = true;
         }
 
-        GlobalsInit();
-        ClocksInit();
+        if (menuRunning) {
+            while (menuRunning) {
+                menuMainLoop();
+            }
+        }
+        else {
+            GlobalsInit();
+            ClocksInit();
 
-        while (gameRunning) {
-            mainLoop();
+            while (gameRunning) {
+                mainLoop();
+            }
         }
     }
 #endif
@@ -466,6 +481,7 @@ void TexturesInit()
     uiSelectedT = IMG_LoadTexture(renderer, "res/player.png");
     weaponPlanetT = IMG_LoadTexture(renderer, "res/weaponPlanet.png");
     shotgunT = IMG_LoadTexture(renderer, "res/shotgun.png");
+    controlsT = IMG_LoadTexture(renderer, "res/controlsMenu.png");
 }
 
 void UiInit()
@@ -570,6 +586,7 @@ void WindowInit()
     window = SDL_CreateWindow("TotalChaos", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_RESIZABLE);
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     robotoF = TTF_OpenFont("res/roboto.ttf", 72);
+    moonhouseF = TTF_OpenFont("res/moonhouse.ttf", 72);
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
     SDL_RenderSetScale(renderer, w / (float)windowWidth, h / (float)windowHeight);
@@ -603,102 +620,6 @@ void BounceOff(Entity* a, Entity* b, bool affectB)
         return;
     b->dx = directionB.x;
     b->dy = directionB.y;
-}
-
-MenuOption displayMainMenu(SDL_Renderer* rendererMenu, TTF_Font* fontMenu, SDL_Point* mousePosMenu)
-{
-    const int NUMMENU = 2;
-    MenuButton buttons[NUMMENU];
-    const std::string labels[NUMMENU] = { "Play", "Exit" };
-    const MenuOption menuTypes[NUMMENU] = { MenuOption::Play, MenuOption::Quit };
-    SDL_Color color[2] = { { 255, 255, 255 }, { 255, 0, 0 } };
-
-    // Setup background and title
-    SDL_SetRenderDrawColor(rendererMenu, 0, 0, 0, 1);
-
-    Text titleText;
-    titleText.dstR.w = windowWidth - 100;
-    titleText.dstR.h = 100;
-    titleText.dstR.x = windowWidth / 2.0f - titleText.dstR.w / 2.0f;
-    titleText.dstR.y = titleText.dstR.h / 2.0f;
-    titleText.setText(rendererMenu, fontMenu, "Total Chaos In Space", MAIN_MENU_COLOR);
-
-    // Setup buttons
-    for (int i = 0; i < NUMMENU; ++i) {
-        buttons[i].label = labels[i];
-        buttons[i].menuType = menuTypes[i];
-        buttons[i].selected = false;
-        buttons[i].buttonText.dstR.w = 100;
-        buttons[i].buttonText.dstR.h = 40;
-        CalculateButtonPosition(&buttons[i].buttonText.dstR, i, NUMMENU, windowWidth, windowHeight, MAIN_MENU_BUTTON_PADDING);
-        buttons[i].buttonText.dstR.y += titleText.dstR.h;
-        buttons[i].buttonText.setText(rendererMenu, fontMenu, buttons[i].label, color[0]);
-    }
-
-    // Setup pointer by selected button.
-    SDL_FRect uiSelectedR;
-    uiSelectedR.w = 32;
-    uiSelectedR.h = 32;
-
-    SDL_Event eventMenu;
-    while (true) {
-        SDL_RenderClear(rendererMenu);
-        while (SDL_PollEvent(&eventMenu)) {
-            switch (eventMenu.type) {
-            case SDL_QUIT:
-                return MenuOption::Quit;
-            case SDL_WINDOWEVENT:
-                if (eventMenu.window.event == SDL_WINDOWEVENT_RESIZED) {
-                    SDL_RenderSetScale(rendererMenu, eventMenu.window.data1 / (float)windowWidth, eventMenu.window.data2 / (float)windowHeight);
-                }
-                break;
-            case SDL_MOUSEMOTION:
-                mousePosMenu->x = eventMenu.motion.x;
-                mousePosMenu->y = eventMenu.motion.y;
-                for (int i = 0; i < NUMMENU; ++i) {
-                    if (SDL_PointInFRect(mousePosMenu, &buttons[i].buttonText.dstR)) {
-                        if (!buttons[i].selected) {
-                            buttons[i].selected = true;
-                            buttons[i].buttonText.setText(rendererMenu, fontMenu, buttons[i].label, color[1]);
-                        }
-                    }
-                    else {
-                        if (buttons[i].selected) {
-                            buttons[i].selected = false;
-                            buttons[i].buttonText.setText(rendererMenu, fontMenu, buttons[i].label, color[0]);
-                        }
-                    }
-                }
-                break;
-            case SDL_MOUSEBUTTONDOWN:
-                mousePosMenu->x = eventMenu.motion.x;
-                mousePosMenu->y = eventMenu.motion.y;
-                for (int i = 0; i < NUMMENU; ++i) {
-                    if (SDL_PointInFRect(mousePosMenu, &buttons[i].buttonText.dstR)) {
-                        return buttons[i].menuType;
-                    }
-                }
-                break;
-            case SDL_KEYDOWN:
-                if (eventMenu.key.keysym.sym == SDLK_ESCAPE) {
-                    return MenuOption::Quit;
-                }
-                break;
-            }
-        }
-
-        titleText.draw(rendererMenu);
-        for (MenuButton button : buttons) {
-            if (button.selected) {
-                uiSelectedR.x = button.buttonText.dstR.x - button.buttonText.dstR.w / 2.0f - uiSelectedR.w / 2.0f;
-                uiSelectedR.y = button.buttonText.dstR.y;
-                SDL_RenderCopyF(rendererMenu, uiSelectedT, 0, &uiSelectedR);
-            }
-            button.buttonText.draw(rendererMenu);
-        }
-
-        SDL_RenderPresent(rendererMenu);
-    }
 }
 
 void InputEvents(const SDL_Event& event)
@@ -1151,6 +1072,9 @@ void RenderAll()
     if (gameOver) {
         RenderGameOverMenu(robotoF);
     }
+    if (controlsMenu) {
+        RenderControlsMenu(robotoF);
+    }
 
     SDL_RenderPresent(renderer);
 }
@@ -1192,13 +1116,12 @@ void FireWhenReady()
 }
 
 #pragma region Menu Functions
-MenuOption DisplayMainMenu(TTF_Font* font)
+MenuOption DisplayMainMenu(TTF_Font* titleFont, TTF_Font* font)
 {
-    const int NUMMENU = 3;
+    const int NUMMENU = 5;
     MenuButton buttons[NUMMENU];
-    const std::string labels[NUMMENU] = { "Play", "Credits", "Exit" };
-    const MenuOption menuTypes[NUMMENU] = { MenuOption::Play, MenuOption::Credits, MenuOption::Quit };
-    SDL_Color color[2] = { { 255, 255, 255 }, { 255, 0, 0 } };
+    const std::string labels[NUMMENU] = { "Play", "Controls", "HighScores", "Credits", "Exit" };
+    const MenuOption menuTypes[NUMMENU] = { MenuOption::Play, MenuOption::Controls, MenuOption::Highscores, MenuOption::Credits, MenuOption::Quit };
 
     // Setup background and title
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
@@ -1208,18 +1131,20 @@ MenuOption DisplayMainMenu(TTF_Font* font)
     titleText.dstR.h = 100;
     titleText.dstR.x = windowWidth / 2.0f - titleText.dstR.w / 2.0f;
     titleText.dstR.y = titleText.dstR.h / 2.0f;
-    titleText.setText(renderer, font, "Total Chaos In Space", MAIN_MENU_COLOR);
+    titleText.setText(renderer, titleFont, "Total Chaos In Space", TITLE_COLOR);
 
+    float largestWidth = 0;
     // Setup buttons
     for (int i = 0; i < NUMMENU; ++i) {
         buttons[i].label = labels[i];
         buttons[i].menuType = menuTypes[i];
         buttons[i].selected = false;
-        buttons[i].buttonText.dstR.w = 100;
+        buttons[i].buttonText.dstR.w = strlen(labels[i].c_str()) * LETTER_WIDTH;
         buttons[i].buttonText.dstR.h = 40;
         CalculateButtonPosition(&buttons[i].buttonText.dstR, i, NUMMENU, windowWidth, windowHeight, MAIN_MENU_BUTTON_PADDING);
         buttons[i].buttonText.dstR.y += titleText.dstR.h;
-        buttons[i].buttonText.setText(renderer, font, buttons[i].label, color[0]);
+        buttons[i].buttonText.setText(renderer, font, buttons[i].label, BUTTON_UNSELECTED);
+        largestWidth = std::max(buttons[i].buttonText.dstR.w, largestWidth);
     }
 
     // Setup pointer by selected button.
@@ -1251,13 +1176,13 @@ MenuOption DisplayMainMenu(TTF_Font* font)
                     if (SDL_PointInFRect(&mousePos, &buttons[i].buttonText.dstR)) {
                         if (!buttons[i].selected) {
                             buttons[i].selected = true;
-                            buttons[i].buttonText.setText(renderer, font, buttons[i].label, color[1]);
+                            buttons[i].buttonText.setText(renderer, font, buttons[i].label, BUTTON_SELECTED);
                         }
                     }
                     else {
                         if (buttons[i].selected) {
                             buttons[i].selected = false;
-                            buttons[i].buttonText.setText(renderer, font, buttons[i].label, color[0]);
+                            buttons[i].buttonText.setText(renderer, font, buttons[i].label, BUTTON_UNSELECTED);
                         }
                     }
                 }
@@ -1276,7 +1201,7 @@ MenuOption DisplayMainMenu(TTF_Font* font)
         titleText.draw(renderer);
         for (MenuButton button : buttons) {
             if (button.selected) {
-                uiSelectedR.x = button.buttonText.dstR.x - button.buttonText.dstR.w / 2.0f - uiSelectedR.w / 2.0f;
+                uiSelectedR.x = windowWidth / 2.0f - largestWidth / 2.0f - uiSelectedR.w - POINTER_OFFSET;
                 uiSelectedR.y = button.buttonText.dstR.y;
                 SDL_RenderCopyF(renderer, uiSelectedT, 0, &uiSelectedR);
             }
@@ -1295,21 +1220,20 @@ void RenderPauseMenu(TTF_Font* font)
 
     for (int i = 0; i < PAUSE_NUM_OPTIONS; ++i) {
         if (pauseOptions[i].selected) {
-            pauseOptions[i].buttonText.setText(renderer, font, pauseOptions[i].label, PAUSE_SELECTED);
+            pauseOptions[i].buttonText.setText(renderer, font, pauseOptions[i].label, BUTTON_SELECTED);
             uiSelector.x = windowWidth / 2.0f - pauseLabelLargest / 2.0f - uiSelector.w - POINTER_OFFSET;
             uiSelector.y = pauseOptions[i].buttonText.dstR.y;
             SDL_RenderCopyF(renderer, uiSelectedT, 0, &uiSelector);
         }
         else {
-            pauseOptions[i].buttonText.setText(renderer, font, pauseOptions[i].label, PAUSE_UNSELECTED);
+            pauseOptions[i].buttonText.setText(renderer, font, pauseOptions[i].label, BUTTON_UNSELECTED);
         }
 
         pauseOptions[i].buttonText.draw(renderer);
     }
 }
 
-void PauseInit(TTF_Font* font)
-{
+void PauseInit(TTF_Font* titleFont, TTF_Font* font) {
     // Setup background and title
     pauseContainer.w = windowWidth / 2.0f - 75;
     pauseContainer.h = windowHeight;
@@ -1320,7 +1244,7 @@ void PauseInit(TTF_Font* font)
     pauseTitleText.dstR.h = 100;
     pauseTitleText.dstR.x = windowWidth / 2.0f - pauseTitleText.dstR.w / 2.0f;
     pauseTitleText.dstR.y = pauseTitleText.dstR.h / 2.0f;
-    pauseTitleText.setText(renderer, font, "Paused", PAUSE_MENU_COLOR);
+    pauseTitleText.setText(renderer, titleFont, "Paused", TITLE_COLOR);
 
     pauseLabelLargest = 0.0f;
     // Setup buttons
@@ -1332,7 +1256,7 @@ void PauseInit(TTF_Font* font)
         pauseOptions[i].buttonText.dstR.h = 50;
         CalculateButtonPosition(&pauseOptions[i].buttonText.dstR, i, PAUSE_NUM_OPTIONS, windowWidth, windowHeight, PAUSE_MENU_BUTTON_PADDING);
         pauseOptions[i].buttonText.dstR.y += pauseTitleText.dstR.h;
-        pauseOptions[i].buttonText.setText(renderer, font, pauseOptions[i].label, PAUSE_UNSELECTED);
+        pauseOptions[i].buttonText.setText(renderer, font, pauseOptions[i].label, BUTTON_UNSELECTED);
 
         pauseLabelLargest = std::max(pauseLabelLargest, pauseOptions[i].buttonText.dstR.w);
         ;
@@ -1347,21 +1271,20 @@ void RenderGameOverMenu(TTF_Font* font)
 
     for (int i = 0; i < GAMEOVER_NUM_OPTIONS; ++i) {
         if (gameOverOptions[i].selected) {
-            gameOverOptions[i].buttonText.setText(renderer, font, gameOverOptions[i].label, GAMEOVER_SELECTED);
+            gameOverOptions[i].buttonText.setText(renderer, font, gameOverOptions[i].label, BUTTON_SELECTED);
             uiSelector.x = windowWidth / 2.0f - gameOverLargest / 2.0f - uiSelector.w - POINTER_OFFSET;
             uiSelector.y = gameOverOptions[i].buttonText.dstR.y;
             SDL_RenderCopyF(renderer, uiSelectedT, 0, &uiSelector);
         }
         else {
-            gameOverOptions[i].buttonText.setText(renderer, font, gameOverOptions[i].label, GAMEOVER_UNSELECTED);
+            gameOverOptions[i].buttonText.setText(renderer, font, gameOverOptions[i].label, BUTTON_UNSELECTED);
         }
 
         gameOverOptions[i].buttonText.draw(renderer);
     }
 }
 
-void GameOverInit(TTF_Font* font)
-{
+void GameOverInit(TTF_Font* titleFont, TTF_Font* font) {
     // Setup background and title
     gameOverContainer.w = windowWidth;
     gameOverContainer.h = windowHeight;
@@ -1371,8 +1294,8 @@ void GameOverInit(TTF_Font* font)
     gameOverTitleText.dstR.w = gameOverContainer.w - 300;
     gameOverTitleText.dstR.h = 100;
     gameOverTitleText.dstR.x = windowWidth / 2.0f - gameOverTitleText.dstR.w / 2.0f;
-    gameOverTitleText.dstR.h = gameOverTitleText.dstR.h / 2.0f + 100;
-    gameOverTitleText.setText(renderer, font, "GAME OVER", GAMEOVER_MENU_COLOR);
+    gameOverTitleText.dstR.y = gameOverTitleText.dstR.h / 2.0f + 100;
+    gameOverTitleText.setText(renderer, titleFont, "GAME OVER", TITLE_COLOR);
 
     gameOverLargest = 0.0f;
     // Setup buttons
@@ -1384,55 +1307,155 @@ void GameOverInit(TTF_Font* font)
         gameOverOptions[i].buttonText.dstR.h = 50;
         CalculateButtonPosition(&gameOverOptions[i].buttonText.dstR, i, GAMEOVER_NUM_OPTIONS, windowWidth, windowHeight, GAMEOVER_MENU_BUTTON_PADDING);
         gameOverOptions[i].buttonText.dstR.y += gameOverTitleText.dstR.h;
-        gameOverOptions[i].buttonText.setText(renderer, font, gameOverOptions[i].label, GAMEOVER_UNSELECTED);
+        gameOverOptions[i].buttonText.setText(renderer, font, gameOverOptions[i].label, BUTTON_UNSELECTED);
 
-        gameOverLargest = std::max(gameOverLargest, gameOverOptions[i].buttonText.dstR.w);
-        ;
+        gameOverLargest = std::max(gameOverLargest, gameOverOptions[i].buttonText.dstR.w);;
+    }    
+}
+
+void RenderControlsMenu(TTF_Font* font) {
+    SDL_RenderCopyF(renderer, controlsT, 0, 0);
+    SDL_SetRenderDrawColor(renderer, 60, 60, 60, SDL_ALPHA_OPAQUE);
+    SDL_RenderFillRectF(renderer, &controlsTitleContainer);  
+
+    SDL_SetRenderDrawColor(renderer, 60, 60, 60, SDL_ALPHA_OPAQUE);
+    SDL_RenderFillRectF(renderer, &controlsOptionContainer);
+    
+    controlsTitleText.draw(renderer);
+
+    if (controlsOptions.selected) {
+        controlsOptions.buttonText.setText(renderer, font, controlsOptions.label, BUTTON_SELECTED);
+    }
+    else {
+        controlsOptions.buttonText.setText(renderer, font, controlsOptions.label, BUTTON_UNSELECTED);
     }
 
-    // Setup pointer by selected button.
+    controlsOptions.buttonText.draw(renderer);
+}
+
+void ControlsInit(TTF_Font* titleFont, TTF_Font* font) {
+    // Setup background and title
+    controlsTitleContainer.w = 500;
+    controlsTitleContainer.h = 100;
+    controlsTitleContainer.x = windowWidth / 2.0f - controlsTitleContainer.w / 2.0f;
+    controlsTitleContainer.y = 0;
+
+    controlsOptionContainer.w = strlen(controlsLabel.c_str()) * LETTER_WIDTH + 50;
+    controlsOptionContainer.h = 75;
+    controlsOptionContainer.x = 20;
+    controlsOptionContainer.y = windowHeight - controlsOptionContainer.h - 20;
+
+    controlsTitleText.dstR.w = 450;
+    controlsTitleText.dstR.h = 75;
+    controlsTitleText.dstR.x = windowWidth / 2.0f - controlsTitleText.dstR.w / 2.0f;
+    controlsTitleText.dstR.y = controlsTitleContainer.h / 2.0f - controlsTitleText.dstR.h / 2.0f;
+    controlsTitleText.setText(renderer, titleFont, "Controls", TITLE_COLOR);
+
+    controlsOptions.label = controlsLabel;
+    controlsOptions.menuType = controlsMenuType;
+    controlsOptions.selected = false;
+    controlsOptions.buttonText.dstR.w = strlen(controlsOptions.label.c_str()) * LETTER_WIDTH;
+    controlsOptions.buttonText.dstR.h = 50;
+    controlsOptions.buttonText.dstR.x = controlsOptionContainer.x + controlsOptionContainer.w / 2.0f - controlsOptions.buttonText.dstR.w / 2.0f;
+    controlsOptions.buttonText.dstR.y = controlsOptionContainer.y + controlsOptionContainer.h / 2.0f - controlsOptions.buttonText.dstR.h / 2.0f;
+    controlsOptions.buttonText.setText(renderer, font, controlsOptions.label, BUTTON_UNSELECTED);
+
 }
 
 void HandleMenuOption(MenuOption option)
 {
     switch (option) {
-    case MenuOption::Play:
-        gameRunning = true;
-        audioManager->PlayMusic(MusicAudio::Background);
-        state = State::Gameplay;
-        break;
-    case MenuOption::Credits:
-        gameRunning = true;
-        state = State::Credits;
-        break;
-    case MenuOption::Restart:
-        restart = true;
-        gameRunning = false;
-        audioManager->StopMusic();
-        audioManager->PlayMusic(MusicAudio::Background);
-        break;
-    case MenuOption::Resume:
-        pausing = false;
-        pauseKeyHeld = false;
-        audioManager->ResumeMusic();
-        break;
-    case MenuOption::Controls:
-        gameRunning = false;
-        break;
-    case MenuOption::Highscores:
-        gameRunning = false;
-        break;
-    case MenuOption::Main:
-        gameRunning = false;
-        restart = false;
-        audioManager->StopMusic();
-        break;
-    case MenuOption::Quit:
-        gameRunning = false;
-        appRunning = false;
-        audioManager->StopMusic();
-        audioManager->Release();
-        break;
+        case MenuOption::Play:
+            gameRunning = true;
+            audioManager->PlayMusic(MusicAudio::Background);
+            state = State::Gameplay;
+            break;
+        case MenuOption::Credits:
+            gameRunning = true;
+            state = State::Credits;
+            break;
+        case MenuOption::Restart:
+            restart = true;
+            gameRunning = false;
+            audioManager->StopMusic();
+            audioManager->PlayMusic(MusicAudio::Background);
+            break;
+        case MenuOption::Resume:
+            pausing = false;
+            pauseKeyHeld = false;
+            audioManager->ResumeMusic();
+            break;
+        case MenuOption::Controls:
+            gameRunning = false;
+            controlsMenu = true;
+            menuRunning = true;
+            break;
+        case MenuOption::Highscores:
+            gameRunning = false;
+            break;
+        case MenuOption::Main:
+            gameRunning = false;
+            restart = false;
+            menuRunning = false;
+            audioManager->StopMusic();
+            break;
+        case MenuOption::Quit:
+            gameRunning = false;
+            appRunning = false;
+            menuRunning = false;
+            audioManager->StopMusic();
+            audioManager->Release();
+            break;
     }
+}
+
+void menuMainLoop() {
+    SDL_Event event;
+
+    SDL_FRect extendedWindowR;
+    extendedWindowR.w = windowWidth + 5;
+    extendedWindowR.h = windowHeight + 5;
+    extendedWindowR.x = -5;
+    extendedWindowR.y = -5;
+
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT) {
+            menuRunning = false;
+            appRunning = false;
+        }
+        if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED) {
+            SDL_RenderSetScale(renderer, event.window.data1 / (float)windowWidth, event.window.data2 / (float)windowHeight);
+        }
+        if (event.type == SDL_MOUSEBUTTONDOWN) {
+            buttons[event.button.button] = true;
+            if (controlsMenu) {
+                if (SDL_PointInFRect(&mousePos, &controlsOptions.buttonText.dstR)) {
+                    audioManager->PlaySFX(SFXAudio::UI);
+                    controlsMenu = false;
+                    HandleMenuOption(controlsOptions.menuType);
+                }
+            }
+        }
+        if (event.type == SDL_MOUSEBUTTONUP) {
+            buttons[event.button.button] = false;
+        }
+        if (event.type == SDL_MOUSEMOTION) {
+            float scaleX, scaleY;
+            SDL_RenderGetScale(renderer, &scaleX, &scaleY);
+            mousePos.x = event.motion.x / scaleX;
+            mousePos.y = event.motion.y / scaleY;
+            realMousePos.x = event.motion.x;
+            realMousePos.y = event.motion.y;
+            if (controlsMenu) {
+                if (SDL_PointInFRect(&mousePos, &controlsOptions.buttonText.dstR)) {
+                    controlsOptions.selected = true;
+                }
+                else {
+                    controlsOptions.selected = false;
+                }
+            }
+        }
+    }
+    RenderAll();
 }
 #pragma endregion
