@@ -17,6 +17,8 @@ SDL_Texture* closeT;
 SDL_Texture* coinsT;
 SDL_Texture* uiSelectedT;
 SDL_Texture* portalT;
+SDL_Texture* weaponPlanetT;
+SDL_Texture* shotgunT;
 SDL_Texture* controlsT;
 Clock globalClock;
 std::vector<Bullet> bullets;
@@ -31,7 +33,7 @@ std::vector<Entity> healthPickups;
 Clock healthPickupClock;
 std::vector<Entity> bombs;
 Clock bombClock;
-bool buying = false;
+bool buyingShield = false;
 Text shieldPriceText;
 Text shieldText;
 Text shieldHealthText;
@@ -88,6 +90,12 @@ SDL_FRect controlsOptionContainer;
 bool controlsMenu = false;
 float playerHealth;
 AudioManager* audioManager = AudioManager::Instance();
+Text shotgunPriceText;
+Text shotgunText;
+SDL_FRect buyShotgunR;
+SDL_FRect buyShotgunBtnR;
+bool buyingShotgun = false;
+bool hasShotgun = false;
 
 void WindowInit();
 
@@ -137,7 +145,6 @@ void ControlsInit(TTF_Font* titleFont, TTF_Font* font);
 
 void HandleMenuOption(MenuOption option);
 
-
 void mainLoop()
 {
     float deltaTime = globalClock.restart();
@@ -149,76 +156,79 @@ void mainLoop()
     extendedWindowR.x = -5;
     extendedWindowR.y = -5;
 
-	while (SDL_PollEvent(&event)) {
-		InputEvents(event);
-	}
-	if (!buying && !pausing && !gameOver) {
-		player.dx = 0;
-		player.dy = 0;
-		if (keys[SDL_SCANCODE_A]) {
-			player.dx = -1;
-		}
-		else if (keys[SDL_SCANCODE_D]) {
-			player.dx = 1;
-		}
-		if (keys[SDL_SCANCODE_W]) {
-			player.dy = -1;
-		}
-		else if (keys[SDL_SCANCODE_S]) {
-			player.dy = 1;
-		}
-		if (buttons[SDL_BUTTON_LEFT]) {
-			FireWhenReady();
-		}
-		if (buttons[SDL_BUTTON_RIGHT] && player.hasBomb) {
-			//If you have a bomb destroy every bullet and enemy within a radius
-			for (size_t i = 0; i < bullets.size(); i++) {
-				//Don't destroy the player's bullets
-				if (bullets[i].GetTargetMask() == TargetMask::EnemiesMask) continue;
-				//Check if the bullet is within the radius
-				SDL_FPoint playerPos = {
-					player.r.x,
-					player.r.y
-				};
+    while (SDL_PollEvent(&event)) {
+        InputEvents(event);
+    }
+    if (!buyingShield && !buyingShotgun && !pausing && !gameOver) {
+        player.dx = 0;
+        player.dy = 0;
+        if (keys[SDL_SCANCODE_A]) {
+            player.dx = -1;
+        }
+        else if (keys[SDL_SCANCODE_D]) {
+            player.dx = 1;
+        }
+        if (keys[SDL_SCANCODE_W]) {
+            player.dy = -1;
+        }
+        else if (keys[SDL_SCANCODE_S]) {
+            player.dy = 1;
+        }
+        if (buttons[SDL_BUTTON_LEFT]) {
+            FireWhenReady();
+        }
+        if (buttons[SDL_BUTTON_RIGHT] && player.hasBomb) {
+            //If you have a bomb destroy every bullet and enemy within a radius
+            for (size_t i = 0; i < bullets.size(); i++) {
+                //Don't destroy the player's bullets
+                if (bullets[i].GetTargetMask() == TargetMask::EnemiesMask)
+                    continue;
+                //Check if the bullet is within the radius
+                SDL_FPoint playerPos = {
+                    player.r.x,
+                    player.r.y
+                };
 
-				SDL_FPoint bulletPos = {
-					bullets[i].r.x,
-					bullets[i].r.y
-				};
+                SDL_FPoint bulletPos = {
+                    bullets[i].r.x,
+                    bullets[i].r.y
+                };
 
-				float sqrDis = MathUtils::DistanceSqr(bulletPos, playerPos);
+                float sqrDis = MathUtils::DistanceSqr(bulletPos, playerPos);
 
-				if (sqrDis > (BOMB_RADIUS * BOMB_RADIUS)) continue;
-				bullets.erase(bullets.begin() + i--); //Destroy the bullet if it is within the radius
-			}
+                if (sqrDis > (BOMB_RADIUS * BOMB_RADIUS))
+                    continue;
+                bullets.erase(bullets.begin() + i--); //Destroy the bullet if it is within the radius
+            }
 
-			for (size_t i = 0; i < enemies.size(); i++) {
-				SDL_FPoint playerPos = {
-					player.r.x,
-					player.r.y
-				};
+            for (size_t i = 0; i < enemies.size(); i++) {
+                SDL_FPoint playerPos = {
+                    player.r.x,
+                    player.r.y
+                };
 
-				SDL_FPoint enemyPos = {
-					enemies[i].r.x,
-					enemies[i].r.y
-				};
+                SDL_FPoint enemyPos = {
+                    enemies[i].r.x,
+                    enemies[i].r.y
+                };
 
-				float sqrDis = MathUtils::DistanceSqr(enemyPos, playerPos);
+                float sqrDis = MathUtils::DistanceSqr(enemyPos, playerPos);
 
-				if (sqrDis > (BOMB_RADIUS * BOMB_RADIUS)) continue;
-				enemies.erase(enemies.begin() + i--); //Destroy the enemy if it is within the radius
+                if (sqrDis > (BOMB_RADIUS * BOMB_RADIUS))
+                    continue;
+                enemies.erase(enemies.begin() + i--); //Destroy the enemy if it is within the radius
                 audioManager->PlaySFX(SFXAudio::EnemyDeath);
-			}
+            }
 
-			//Reset the player's streak
-			//TODO: Make this a function on the getters and setters of hasBomb
-			player.streak = 0;
-			player.hasBomb = false;
-		}
+            //Reset the player's streak
+            //TODO: Make this a function on the getters and setters of hasBomb
+            player.streak = 0;
+            player.hasBomb = false;
+        }
 
-		EnemySpawn();		
-		
-		EntityMovement(extendedWindowR, deltaTime);
+        EnemySpawn();
+
+        EntityMovement(extendedWindowR, deltaTime);
 
         BulletCollisions(extendedWindowR, deltaTime);
 
@@ -270,7 +280,8 @@ void mainLoop()
     RenderAll();
 }
 
-void GlobalsInit() {
+void GlobalsInit()
+{
     player.dx = 0;
     player.dy = 0;
     player.ghostBullet = false;
@@ -287,7 +298,8 @@ void GlobalsInit() {
     planets.clear();
     healthPickups.clear();
     bombs.clear();
-    buying = false;
+    buyingShield = false;
+    buyingShotgun = false;
 
     std::string sText = "Shield: " + std::to_string(shieldHealth);
     shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
@@ -307,8 +319,8 @@ int main(int argc, char* argv[])
     WindowInit();
     TexturesInit();
 
-    player.r.w = 32;
-    player.r.h = 32;
+    player.r.w = 64;
+    player.r.h = 64;
     playerHealth = player.GetHealth();
 
     uiSelector.w = 32;
@@ -318,7 +330,7 @@ int main(int argc, char* argv[])
     PauseInit(moonhouseF, robotoF);
     GameOverInit(moonhouseF, robotoF);
     ControlsInit(moonhouseF, robotoF);
-    
+    ClocksInit();
 
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(mainLoop, 0, 1);
@@ -351,25 +363,28 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-void TexturesInit() {
-	playerT = IMG_LoadTexture(renderer, "res/player.png");
-	bgT = IMG_LoadTexture(renderer, "res/bg.png");
-	bulletT = IMG_LoadTexture(renderer, "res/bullet.png");
-	redBulletT = IMG_LoadTexture(renderer, "res/bulletRed.png");
-	purpleBulletT = IMG_LoadTexture(renderer, "res/bulletPurple.png");
-	enemyT = IMG_LoadTexture(renderer, "res/enemy.png");
-	planetT = IMG_LoadTexture(renderer, "res/planet.png");
-	meatT = IMG_LoadTexture(renderer, "res/meat.png");
+void TexturesInit()
+{
+    playerT = IMG_LoadTexture(renderer, "res/player.png");
+    bgT = IMG_LoadTexture(renderer, "res/bg.png");
+    bulletT = IMG_LoadTexture(renderer, "res/bullet.png");
+    redBulletT = IMG_LoadTexture(renderer, "res/bulletRed.png");
+    purpleBulletT = IMG_LoadTexture(renderer, "res/bulletPurple.png");
+    enemyT = IMG_LoadTexture(renderer, "res/enemy.png");
+    planetT = IMG_LoadTexture(renderer, "res/planet.png");
+    meatT = IMG_LoadTexture(renderer, "res/meat.png");
 #ifdef _DEBUG //Debug define guard on purpose to generate an error if we don't replace this
-	//TODO: REPLCE THIS, AS IT IS ONLY A PLACEHOLDER!!!!
-	explosionT = IMG_LoadTexture(renderer, "res/gun.png");
+    //TODO: REPLCE THIS, AS IT IS ONLY A PLACEHOLDER!!!!
+    explosionT = IMG_LoadTexture(renderer, "res/gun.png");
 #endif
     portalT = IMG_LoadTexture(renderer, "res/portal.png");
-	buyT = IMG_LoadTexture(renderer, "res/buy.png");
-	shieldT = IMG_LoadTexture(renderer, "res/shield.png");
-	closeT = IMG_LoadTexture(renderer, "res/close.png");
-	coinsT = IMG_LoadTexture(renderer, "res/coins.png");
-	uiSelectedT = IMG_LoadTexture(renderer, "res/player.png");
+    buyT = IMG_LoadTexture(renderer, "res/buy.png");
+    shieldT = IMG_LoadTexture(renderer, "res/shield.png");
+    closeT = IMG_LoadTexture(renderer, "res/close.png");
+    coinsT = IMG_LoadTexture(renderer, "res/coins.png");
+    uiSelectedT = IMG_LoadTexture(renderer, "res/player.png");
+    weaponPlanetT = IMG_LoadTexture(renderer, "res/weaponPlanet.png");
+    shotgunT = IMG_LoadTexture(renderer, "res/shotgun.png");
     controlsT = IMG_LoadTexture(renderer, "res/controlsMenu.png");
 }
 
@@ -441,6 +456,16 @@ void UiInit()
     shieldPrizeCoinsR.h = 32;
     shieldPrizeCoinsR.x = shieldPriceText.dstR.x + shieldPriceText.dstR.w;
     shieldPrizeCoinsR.y = shieldPriceText.dstR.y;
+
+    shotgunPriceText = shieldPriceText;
+    shotgunPriceText.setText(renderer, robotoF, 100);
+
+    shotgunText = shieldText;
+    shotgunText.setText(renderer, robotoF, "Shotgun");
+
+    buyShotgunR = buyShotgunBtnR;
+
+    buyShotgunBtnR = buyBtnR;
 }
 
 void ClocksInit()
@@ -550,10 +575,11 @@ void InputEvents(const SDL_Event& event)
             }
         }
         else {
-            if (SDL_PointInFRect(&mousePos, &closeBtnR) && buying) {
-                buying = false;
+            if (SDL_PointInFRect(&mousePos, &closeBtnR) && (buyingShield || buyingShotgun)) {
+                buyingShield = false;
+                buyingShotgun = false;
             }
-            if (SDL_PointInFRect(&mousePos, &buyBtnR) && buying) {
+            if (SDL_PointInFRect(&mousePos, &buyBtnR) && buyingShield) {
                 if (std::stoi(moneyText.text) >= std::stoi(shieldPriceText.text)) {
                     hasShield = true;
                     shieldHealth = 10;
@@ -562,6 +588,12 @@ void InputEvents(const SDL_Event& event)
                     shieldHealthText.setText(renderer, robotoF, sText, { 255, 0, 0 });
 #endif
                     moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shieldPriceText.text));
+                }
+            }
+            if (SDL_PointInFRect(&mousePos, &buyShotgunBtnR) && buyingShotgun) {
+                if (std::stoi(moneyText.text) >= std::stoi(shotgunPriceText.text)) {
+                    hasShotgun = true;
+                    moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) - std::stoi(shotgunPriceText.text));
                 }
             }
         }
@@ -661,7 +693,12 @@ void EntityMovement(const SDL_FRect& extendedWindowR, float deltaTime)
         planets[i].r.x += planets[i].dx * deltaTime * PLANET_SPEED;
         planets[i].r.y += planets[i].dy * deltaTime * PLANET_SPEED;
         if (SDL_HasIntersectionF(&player.r, &planets[i].r)) {
-            buying = true;
+            if (planets[i].planetType == PlanetType::Shield) {
+                buyingShield = true;
+            }
+            else if (planets[i].planetType == PlanetType::Weapon) {
+                buyingShotgun = true;
+            }
         }
         if (SDL_HasIntersectionF(&player.r, &planets[i].r)
             || !SDL_HasIntersectionF(&planets[i].r, &extendedWindowR)) {
@@ -669,31 +706,31 @@ void EntityMovement(const SDL_FRect& extendedWindowR, float deltaTime)
         }
     }
 
-	//Health pickup's movement
-	for (int i = 0; i < healthPickups.size(); ++i) {
-		healthPickups[i].r.x += healthPickups[i].dx * deltaTime * PLANET_SPEED;
-		healthPickups[i].r.y += healthPickups[i].dy * deltaTime * PLANET_SPEED;
-		if (SDL_HasIntersectionF(&player.r, &healthPickups[i].r)) {
-			player.SetHealth(player.GetHealth() + 10);
-		}
-		if (SDL_HasIntersectionF(&player.r, &healthPickups[i].r)
-			|| !SDL_HasIntersectionF(&healthPickups[i].r, &extendedWindowR)) {
-			healthPickups.erase(healthPickups.begin() + i--);
-		}
-	}
+    //Health pickup's movement
+    for (int i = 0; i < healthPickups.size(); ++i) {
+        healthPickups[i].r.x += healthPickups[i].dx * deltaTime * PLANET_SPEED;
+        healthPickups[i].r.y += healthPickups[i].dy * deltaTime * PLANET_SPEED;
+        if (SDL_HasIntersectionF(&player.r, &healthPickups[i].r)) {
+            player.SetHealth(player.GetHealth() + 10);
+        }
+        if (SDL_HasIntersectionF(&player.r, &healthPickups[i].r)
+            || !SDL_HasIntersectionF(&healthPickups[i].r, &extendedWindowR)) {
+            healthPickups.erase(healthPickups.begin() + i--);
+        }
+    }
 
-	//Explosion's movement
-	for (size_t i = 0; i < bombs.size(); ++i) {
-		bombs[i].r.x += bombs[i].dx * deltaTime * PLANET_SPEED;
-		bombs[i].r.y += bombs[i].dy * deltaTime * PLANET_SPEED;
-		if (SDL_HasIntersectionF(&player.r, &bombs[i].r)) {
-			player.hasBomb = true;
-		}
-		if (SDL_HasIntersectionF(&player.r, &bombs[i].r)
-			|| !SDL_HasIntersectionF(&bombs[i].r, &extendedWindowR)) {
-			bombs.erase(bombs.begin() + i--);
-		}
-	}
+    //Explosion's movement
+    for (size_t i = 0; i < bombs.size(); ++i) {
+        bombs[i].r.x += bombs[i].dx * deltaTime * PLANET_SPEED;
+        bombs[i].r.y += bombs[i].dy * deltaTime * PLANET_SPEED;
+        if (SDL_HasIntersectionF(&player.r, &bombs[i].r)) {
+            player.hasBomb = true;
+        }
+        if (SDL_HasIntersectionF(&player.r, &bombs[i].r)
+            || !SDL_HasIntersectionF(&bombs[i].r, &extendedWindowR)) {
+            bombs.erase(bombs.begin() + i--);
+        }
+    }
 }
 
 void BulletCollisions(const SDL_FRect& extendedWindowR, float deltaTime)
@@ -735,24 +772,24 @@ deleteCollidingBegin:
             }
         }
 
-		//Enemy collision
-		for (int j = 0; j < enemies.size(); ++j) {
-			//Layer control
-			if ((bullets[i].GetTargetMask() & TargetMask::EnemiesMask) == 0)
-				continue;
-			if (SDL_HasIntersectionF(&bullets[i].r, &enemies[j].r)) {
-				player.streak++;
+        //Enemy collision
+        for (int j = 0; j < enemies.size(); ++j) {
+            //Layer control
+            if ((bullets[i].GetTargetMask() & TargetMask::EnemiesMask) == 0)
+                continue;
+            if (SDL_HasIntersectionF(&bullets[i].r, &enemies[j].r)) {
+                player.streak++;
                 audioManager->PlaySFX(SFXAudio::EnemyDeath);
-				enemies.erase(enemies.begin() + j--);
-				bullets.erase(bullets.begin() + i--);
-				killPointsText.setText(renderer, robotoF, std::stoi(killPointsText.text) + 1);
-				if (std::stoi(killPointsText.text) % 100 == 0) {
-					moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 30);
-				}
-				moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 1);
-				goto deleteCollidingBegin;
-			}
-		}
+                enemies.erase(enemies.begin() + j--);
+                bullets.erase(bullets.begin() + i--);
+                killPointsText.setText(renderer, robotoF, std::stoi(killPointsText.text) + 1);
+                if (std::stoi(killPointsText.text) % 100 == 0) {
+                    moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 30);
+                }
+                moneyText.setText(renderer, robotoF, std::stoi(moneyText.text) + 1);
+                goto deleteCollidingBegin;
+            }
+        }
 
         if ((bullets[i].lifetime + deltaTime) > BULLET_SPLIT_DELAY_IN_MS) {
             bullets[i].Split(&bullets);
@@ -807,33 +844,38 @@ void PowerUpSpawner()
         planets.back().r.x = random(0, windowWidth - planets.back().r.w);
         planets.back().r.y = -planets.back().r.h;
         planets.back().dy = 1;
+        if (!hasShotgun) {
+            planets.back().planetType = (PlanetType)random(0, 1);
+        }
+        else {
+            planets.back().planetType = (PlanetType)random(0, 0);
+        }
         planetClock.restart();
     }
 
-	//Randomize the spawn time of the health
-	healthSpawnTime = healthSpawnTime == 0 ? random(HEALTH_SPAWN_MIN_DELAY_IN_MS, HEALTH_SPAWN_MAX_DELAY_IN_MS) : healthSpawnTime;
-	
-	if (healthPickupClock.getElapsedTime() > healthSpawnTime) {
-		healthPickups.push_back(Entity());
-		healthPickups.back().r.w = 64;
-		healthPickups.back().r.h = 64;
-		healthPickups.back().r.x = random(0, windowWidth - healthPickups.back().r.w);
-		healthPickups.back().r.y = -healthPickups.back().r.h;
-		healthPickups.back().dy = 1;
-		healthSpawnTime = 0;
-		healthPickupClock.restart();
-	}
+    //Randomize the spawn time of the health
+    healthSpawnTime = healthSpawnTime == 0 ? random(HEALTH_SPAWN_MIN_DELAY_IN_MS, HEALTH_SPAWN_MAX_DELAY_IN_MS) : healthSpawnTime;
 
-	if (!player.hasBomb && player.streak >= STREAK_BOMB_REQUIREMENT && bombs.size() < 1) {
-		//Create the bomb
-		bombs.push_back(Entity());
-		bombs.back().r.w = 64;
-		bombs.back().r.h = 64;
-		bombs.back().r.x = random(0, windowWidth - bombs.back().r.w);
-		bombs.back().r.y = -bombs.back().r.h;
-		bombs.back().dy = 1;
-	}
+    if (healthPickupClock.getElapsedTime() > healthSpawnTime) {
+        healthPickups.push_back(Entity());
+        healthPickups.back().r.w = 64;
+        healthPickups.back().r.h = 64;
+        healthPickups.back().r.x = random(0, windowWidth - healthPickups.back().r.w);
+        healthPickups.back().r.y = -healthPickups.back().r.h;
+        healthPickups.back().dy = 1;
+        healthSpawnTime = 0;
+        healthPickupClock.restart();
+    }
 
+    if (!player.hasBomb && player.streak >= STREAK_BOMB_REQUIREMENT && bombs.size() < 1) {
+        //Create the bomb
+        bombs.push_back(Entity());
+        bombs.back().r.w = 64;
+        bombs.back().r.h = 64;
+        bombs.back().r.x = random(0, windowWidth - bombs.back().r.w);
+        bombs.back().r.y = -bombs.back().r.h;
+        bombs.back().dy = 1;
+    }
 }
 
 void RenderAll()
@@ -881,37 +923,51 @@ void RenderAll()
 
     //Renders planets
     for (int i = 0; i < planets.size(); ++i) {
-        SDL_RenderCopyF(renderer, planetT, 0, &planets[i].r);
+        if (planets[i].planetType == PlanetType::Shield) {
+            SDL_RenderCopyF(renderer, planetT, 0, &planets[i].r);
+        }
+        else if (planets[i].planetType == PlanetType::Weapon) {
+            SDL_RenderCopyF(renderer, weaponPlanetT, 0, &planets[i].r);
+        }
     }
 
-	//Renders meat
-	for (size_t i = 0; i < healthPickups.size(); i++) {
-		SDL_RenderCopyF(renderer, meatT, 0, &healthPickups[i].r);
-	}
+    //Renders meat
+    for (size_t i = 0; i < healthPickups.size(); i++) {
+        SDL_RenderCopyF(renderer, meatT, 0, &healthPickups[i].r);
+    }
 
     //Render portals
     for (int i = 0; i < portalRects.size(); ++i) {
         SDL_RenderCopyF(renderer, portalT, 0, &portalRects[i]);
     }
 
-	//Render bomb
-	for (size_t i = 0; i < bombs.size(); i++) {
-		SDL_RenderCopyF(renderer, explosionT, 0, &bombs[i].r);
-	}
+    //Render bomb
+    for (size_t i = 0; i < bombs.size(); i++) {
+        SDL_RenderCopyF(renderer, explosionT, 0, &bombs[i].r);
+    }
 
-	SDL_RenderCopyF(renderer, coinsT, 0, &moneyR);
-	moneyText.draw(renderer);
-   
-	if (buying) {
-		SDL_SetRenderDrawColor(renderer, 125, 125, 125, 0);
-		SDL_RenderFillRectF(renderer, &buyR);
-		shieldPriceText.draw(renderer);
-		shieldText.draw(renderer);
-		SDL_RenderCopyF(renderer, buyT, 0, &buyBtnR);
-		SDL_RenderCopyF(renderer, shieldT, 0, &buyShieldR);
-		SDL_RenderCopyF(renderer, closeT, 0, &closeBtnR);
-		SDL_RenderCopyF(renderer, coinsT, 0, &shieldPrizeCoinsR);
-	}
+    SDL_RenderCopyF(renderer, coinsT, 0, &moneyR);
+    moneyText.draw(renderer);
+
+    if (buyingShield) {
+        SDL_SetRenderDrawColor(renderer, 125, 125, 125, 0);
+        SDL_RenderFillRectF(renderer, &buyR);
+        shieldPriceText.draw(renderer);
+        shieldText.draw(renderer);
+        SDL_RenderCopyF(renderer, buyT, 0, &buyBtnR);
+        SDL_RenderCopyF(renderer, shieldT, 0, &buyShieldR);
+        SDL_RenderCopyF(renderer, closeT, 0, &closeBtnR);
+        SDL_RenderCopyF(renderer, coinsT, 0, &shieldPrizeCoinsR);
+    }
+    if (buyingShotgun) {
+        SDL_SetRenderDrawColor(renderer, 125, 125, 125, 0);
+        SDL_RenderFillRectF(renderer, &buyR);
+        shotgunPriceText.draw(renderer);
+        shotgunText.draw(renderer);
+        SDL_RenderCopyF(renderer, shotgunT, 0, &buyShotgunR);
+        SDL_RenderCopyF(renderer, closeT, 0, &closeBtnR);
+        SDL_RenderCopyF(renderer, buyT, 0, &buyShotgunBtnR);
+    }
 
     if (pausing) {
         RenderPauseMenu(robotoF);
@@ -924,7 +980,7 @@ void RenderAll()
         RenderControlsMenu(robotoF);
     }
 
-	SDL_RenderPresent(renderer);
+    SDL_RenderPresent(renderer);
 }
 
 void FireWhenReady()
@@ -951,6 +1007,14 @@ void FireWhenReady()
 
         bullets.back().dy = finalPos.y;
         bullets.back().dx = finalPos.x;
+
+        if (hasShotgun) {
+            bullets.push_back(bullets.back());
+            bullets.back().dx += randomF(-0.5, 0);
+            bullets.push_back(bullets.back());
+            bullets.back().dx += randomF(0, 0.5);
+        }
+
         bulletClock.restart();
     }
 }
@@ -1052,7 +1116,8 @@ MenuOption DisplayMainMenu(TTF_Font* titleFont, TTF_Font* font)
     }
 }
 
-void RenderPauseMenu(TTF_Font* font) {
+void RenderPauseMenu(TTF_Font* font)
+{
     SDL_SetRenderDrawColor(renderer, 20, 20, 30, 200);
     SDL_RenderFillRectF(renderer, &pauseContainer);
     pauseTitleText.draw(renderer);
@@ -1069,7 +1134,6 @@ void RenderPauseMenu(TTF_Font* font) {
         }
 
         pauseOptions[i].buttonText.draw(renderer);
-
     }
 }
 
@@ -1098,11 +1162,13 @@ void PauseInit(TTF_Font* titleFont, TTF_Font* font) {
         pauseOptions[i].buttonText.dstR.y += pauseTitleText.dstR.h;
         pauseOptions[i].buttonText.setText(renderer, font, pauseOptions[i].label, BUTTON_UNSELECTED);
 
-        pauseLabelLargest = std::max(pauseLabelLargest, pauseOptions[i].buttonText.dstR.w);;
+        pauseLabelLargest = std::max(pauseLabelLargest, pauseOptions[i].buttonText.dstR.w);
+        ;
     }
 }
 
-void RenderGameOverMenu(TTF_Font* font) {
+void RenderGameOverMenu(TTF_Font* font)
+{
     SDL_SetRenderDrawColor(renderer, 60, 60, 60, 150);
     SDL_RenderFillRectF(renderer, &gameOverContainer);
     gameOverTitleText.draw(renderer);
@@ -1119,7 +1185,6 @@ void RenderGameOverMenu(TTF_Font* font) {
         }
 
         gameOverOptions[i].buttonText.draw(renderer);
-
     }
 }
 
@@ -1201,7 +1266,8 @@ void ControlsInit(TTF_Font* titleFont, TTF_Font* font) {
 
 }
 
-void HandleMenuOption(MenuOption option) {
+void HandleMenuOption(MenuOption option)
+{
     switch (option) {
         case MenuOption::Play:
             gameRunning = true;
