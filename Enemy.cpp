@@ -14,8 +14,6 @@ void Enemy::Combat(SDL_Texture* enemyTexture, std::vector<Bullet>* bulletListRef
 	audioManager->PlaySFX(SFXAudio::EnemyFire);
 	//Create a bullet with the appropriate target
 	Bullet toShoot = Bullet(TargetMask::PlayerMask);
-	toShoot.r.w = 32;
-	toShoot.r.h = 32;
 	toShoot.r.x = this->r.x;
 	toShoot.r.y = this->r.y;
 

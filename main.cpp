@@ -43,6 +43,7 @@ Text shieldPriceText;
 Text shieldText;
 Text shieldHealthText;
 Text killStreakText;
+Text bombText;
 SDL_FRect buyBtnR;
 SDL_FRect buyR;
 SDL_FRect buyShieldR;
@@ -522,6 +523,12 @@ void UiInit()
 	killStreakText.dstR.y = 0;
 	std::string streakText = "Kill streak: " + std::to_string(player.streak);
 	killStreakText.setText(renderer, robotoF, streakText, { 255, 255, 255 });
+
+	bombText.dstR.w = 100;
+	bombText.dstR.h = 30;
+	bombText.dstR.x = windowWidth / 7 - shieldPriceText.dstR.w / 7;
+	bombText.dstR.y = 0;
+	bombText.setText(renderer, robotoF, "[LEFT CLICK FOR BOMB]", {255, 0, 0});
 
 	shieldPriceText.setText(renderer, robotoF, "50");
 	shieldPriceText.dstR.w = 100;
@@ -1064,8 +1071,10 @@ void RenderAll()
 	//Render UI text
 	killPointsText.draw(renderer);
 	healthText.draw(renderer);
-
 	killStreakText.draw(renderer);
+
+	if (player.hasBomb)
+		bombText.draw(renderer);
 
 	//Renders planets
 	for (int i = 0; i < planets.size(); ++i) {
@@ -1135,8 +1144,6 @@ void FireWhenReady()
 		SFXAudio weaponType = SFXAudio::PlayerFire1;
 		//TODO: Encapsulate this in a function (and probably a different file)
 		bullets.push_back(Bullet(TargetMask::EnemiesMask));
-		bullets.back().r.w = 32;
-		bullets.back().r.h = 32;
 		bullets.back().r.x = player.r.x + player.r.w / 2 - bullets.back().r.w / 2;
 		bullets.back().r.y = player.r.y - bullets.back().r.h / 2;
 
