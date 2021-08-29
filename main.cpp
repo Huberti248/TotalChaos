@@ -422,6 +422,7 @@ void GlobalsInit()
 	hasShotgun = false;
 	addingScore = false;
 	scoreAdded = false;
+	SDL_StopTextInput();
 }
 
 int main(int argc, char* argv[])
@@ -436,6 +437,8 @@ int main(int argc, char* argv[])
 	uiSelector.w = 32;
 	uiSelector.h = 32;
 
+	audioManager->PlayMusic(MusicAudio::UIMusic);
+	
 	UiInit();
 	PauseInit(moonhouseF, robotoF);
 	GameOverInit(moonhouseF, robotoF);
@@ -677,14 +680,14 @@ void InputEvents(const SDL_Event& event)
 		}
 
 		//Handle backspace for input
-		if (event.key.keysym.sym == SDLK_BACKSPACE && highScoreInputName.length() > 0) {
+		if (event.key.keysym.sym == SDLK_BACKSPACE && highScoreInputName.length() > 0 && !scoreAdded && addingScore) {
 			//lop off character
 			highScoreInputName.pop_back();
 			//renderText = true;
 		}
 
 		//Add a score
-		if ((event.key.keysym.sym == SDLK_KP_ENTER || event.key.keysym.sym == SDLK_RETURN) && addingScore && highScoreInputName.length() > 0) {
+		if ((event.key.keysym.sym == SDLK_KP_ENTER || event.key.keysym.sym == SDLK_RETURN) && addingScore && !scoreAdded && highScoreInputName.length() > 0) {
 			ShiftScores(std::make_tuple(std::stoi(killPointsText.text), highScoreInputName));
 			//Send the score to the file 
 			HighScores::WriteHighScore(allScores);
@@ -954,6 +957,7 @@ deleteCollidingBegin:
 					BounceOff(&bullets[i], &player, false);
 				}
 				else {
+					audioManager->PlaySFX(SFXAudio::PlayerHit);
 					player.SetHealth(player.GetHealth() - 1);
 					bullets.erase(bullets.begin() + i--);
 					healthText.setText(renderer, robotoF, player.GetHealth(), { 255, 0, 0 });
@@ -1597,7 +1601,7 @@ void HandleMenuOption(MenuOption option)
 	switch (option) {
 		case MenuOption::Play:
 			gameRunning = true;
-			audioManager->PlayMusic(MusicAudio::Background);
+			audioManager->PlayMusic(MusicAudio::BattleMusic);
 			state = State::Gameplay;
 			break;
 		case MenuOption::Credits:
@@ -1608,7 +1612,7 @@ void HandleMenuOption(MenuOption option)
 			restart = true;
 			gameRunning = false;
 			audioManager->StopMusic();
-			audioManager->PlayMusic(MusicAudio::Background);
+			audioManager->PlayMusic(MusicAudio::BattleMusic);
 			break;
 		case MenuOption::Resume:
 			pausing = false;
@@ -1626,7 +1630,10 @@ void HandleMenuOption(MenuOption option)
 		case MenuOption::Main:
 			gameRunning = false;
 			restart = false;
-			audioManager->StopMusic();
+			
+			if (audioManager->IsPlaying() != (int)MusicAudio::UIMusic)
+				audioManager->PlayMusic(MusicAudio::UIMusic);
+			
 			state = State::Main;
 			break;
 		case MenuOption::Quit:
