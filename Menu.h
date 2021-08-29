@@ -15,6 +15,8 @@
 #define GAMEOVER_NUM_OPTIONS 2
 #define GAMEOVER_MENU_BUTTON_PADDING 15
 
+#define HIGHSCORE_WIDTH 280
+
 enum class MenuOption {
 	Play = 1,
 	Resume,
@@ -34,5 +36,8 @@ void CalculateButtonPosition(
 	const float height, 
 	float paddingVertical = 0);
 
-
-
+void CalculateHighScorePosition(
+	SDL_FRect* dstButton,
+	SDL_FRect* scorePos,
+	int index
+);

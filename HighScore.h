@@ -4,7 +4,7 @@
 #include <fstream>
 
 #define HIGH_SCORES_PATH "res/hsc.dat"
-#define HIGH_SCORES_LIMIT 5
+#define HIGH_SCORES_LIMIT 3
 
 class HighScores {
 public:

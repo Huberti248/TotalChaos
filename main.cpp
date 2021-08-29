@@ -28,6 +28,7 @@ SDL_Texture* portalT;
 SDL_Texture* weaponPlanetT;
 SDL_Texture* shotgunT;
 SDL_Texture* controlsT;
+SDL_Texture* highScoreT;
 Clock globalClock;
 std::vector<Bullet> bullets;
 Clock bulletClock;
@@ -492,6 +493,7 @@ void TexturesInit()
 	weaponPlanetT = IMG_LoadTexture(renderer, "res/weaponPlanet.png");
 	shotgunT = IMG_LoadTexture(renderer, "res/shotgun.png");
 	controlsT = IMG_LoadTexture(renderer, "res/controlsMenu.png");
+	highScoreT = IMG_LoadTexture(renderer, "res/highscoresMenu.png");
 }
 
 void UiInit()
@@ -1552,6 +1554,8 @@ void ControlsInit(TTF_Font* titleFont, TTF_Font* font) {
 }
 
 void RenderHighScoresMenu(TTF_Font* titleFont, TTF_Font* font) {
+	SDL_RenderCopyF(renderer, highScoreT, 0, 0);
+
 	highscoresTitleContainer.w = 500;
 	highscoresTitleContainer.h = 100;
 	highscoresTitleContainer.x = windowWidth / 2.0f - controlsTitleContainer.w / 2.0f;
@@ -1585,13 +1589,17 @@ void RenderHighScoresMenu(TTF_Font* titleFont, TTF_Font* font) {
 		std::string name = std::get<1>(allScores[i]);
 
 		Text score;
-		score.dstR.w = 100;
-		score.dstR.h = 50;
-		CalculateButtonPosition(&score.dstR, i, HIGH_SCORES_LIMIT, windowWidth, windowHeight, 10);
-		score.dstR.y += highscoresTitleText.dstR.h;
+		score.dstR.h = 100;
+		score.dstR.w = strlen(std::to_string(nScore).c_str()) * LETTER_WIDTH;
+		Text nameText;
+		nameText.dstR.h = 100;
+		nameText.dstR.w = strlen(name.c_str()) * LETTER_WIDTH;
 
-		std::string te = name + " ----- " + std::to_string(nScore);
-		score.setText(renderer, robotoF, te, { 255, 255, 255 });
+		CalculateHighScorePosition(&nameText.dstR, &score.dstR, i);
+		nameText.setText(renderer, robotoF, name, { 255, 255, 255 });
+		nameText.draw(renderer);
+
+		score.setText(renderer, robotoF, std::to_string(nScore), { 255, 255, 255 });
 		score.draw(renderer);
 	}
 }
