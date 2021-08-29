@@ -15,7 +15,7 @@ public:
 
     static float GetAngle(int x1, int y1, int x2, int y2);
 
-    static float MathUtils::GetDotProduct(SDL_FPoint x, SDL_FPoint y);
+    static float GetDotProduct(SDL_FPoint x, SDL_FPoint y);
     
     static float GetMagnitude(float x, float y);
 
