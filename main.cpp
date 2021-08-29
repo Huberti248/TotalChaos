@@ -113,6 +113,7 @@ bool hasShotgun = false;
 State state = State::Gameplay;
 Text highscoresTitleText;
 SDL_FRect highscoresTitleContainer;
+Text highscoresNameText;
 
 //High score aux varaibles (not best practice)
 std::tuple<int, std::string> allScores[HIGH_SCORES_LIMIT];
@@ -551,10 +552,16 @@ void UiInit()
 	shieldPriceText.dstR.y = buyR.y + 10;
 
 	highScoreTextUI.setText(renderer, robotoF, "50");
-	highScoreTextUI.dstR.w = 500;
+	highScoreTextUI.dstR.w = 800;
 	highScoreTextUI.dstR.h = 40;
 	highScoreTextUI.dstR.x = windowWidth / 2 - highScoreTextUI.dstR.w / 2;
 	highScoreTextUI.dstR.y = buyR.y + 10;
+
+	highscoresNameText.setText(renderer, robotoF, "50");
+	highscoresNameText.dstR.w = 100;
+	highscoresNameText.dstR.h = 40;
+	highscoresNameText.dstR.x = windowWidth / 2 - highscoresNameText.dstR.w / 2;
+	highscoresNameText.dstR.y = highScoreTextUI.dstR.y + highScoreTextUI.dstR.h + 10;
 
 	buyShieldR.w = 32;
 	buyShieldR.h = 32;
@@ -1352,7 +1359,7 @@ void RenderPauseMenu(TTF_Font* font)
 
 void PauseInit(TTF_Font* titleFont, TTF_Font* font) {
 	// Setup background and title
-	pauseContainer.w = windowWidth / 2.0f - 75;
+	pauseContainer.w = windowWidth / 2.0f + 75;
 	pauseContainer.h = windowHeight;
 	pauseContainer.x = windowWidth / 2.0f - pauseContainer.w / 2.0f;
 	pauseContainer.y = 0;
@@ -1389,6 +1396,8 @@ void RenderGameOverMenu(TTF_Font* font) {
 	else {
 		SDL_StopTextInput();
 		highScoreTextUI.setText(renderer, robotoF, "HIGH SCORE ADDED!", { 255, 255, 255 });
+		highScoreTextUI.dstR.w = std::string("HIGH SCORE ADDED!").length() * LETTER_WIDTH;
+		highScoreTextUI.dstR.x = windowWidth / 2.0f - highScoreTextUI.dstR.w / 2.0f;
 		highScoreTextUI.draw(renderer);
 	}
 
@@ -1670,9 +1679,13 @@ void CheckAndAddHighScore(int score) {
 	}
 	else {
 		SDL_StartTextInput();
-		std::string txt = "New highscore, enter your name: " + highScoreInputName;
+		std::string txt = "New highscore, Enter your name (6 Characters Max): ";
 		highScoreTextUI.setText(renderer, robotoF, txt, { 255, 255, 255 });
 		highScoreTextUI.draw(renderer);
+		highscoresNameText.dstR.w = highScoreInputName.length() * LETTER_WIDTH;
+		highscoresNameText.dstR.x = windowWidth / 2.0f - highscoresNameText.dstR.w / 2.0f;
+		highscoresNameText.setText(renderer, robotoF, highScoreInputName, { 255, 255, 255 });
+		highscoresNameText.draw(renderer);
 	}
 
 

@@ -1,7 +1,7 @@
 #pragma once
 #include <SDL.h>
 
-#define LETTER_WIDTH 20
+#define LETTER_WIDTH 30
 #define POINTER_OFFSET 30
 #define BUTTON_SELECTED {200, 200, 0}
 #define BUTTON_UNSELECTED {255, 255, 255}
