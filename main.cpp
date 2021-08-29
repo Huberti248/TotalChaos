@@ -29,6 +29,7 @@ SDL_Texture* weaponPlanetT;
 SDL_Texture* shotgunT;
 SDL_Texture* controlsT;
 SDL_Texture* highScoreT;
+SDL_Texture* mainT;
 Clock globalClock;
 std::vector<Bullet> bullets;
 Clock bulletClock;
@@ -495,6 +496,9 @@ void TexturesInit()
 	shotgunT = IMG_LoadTexture(renderer, "res/shotgun.png");
 	controlsT = IMG_LoadTexture(renderer, "res/controlsMenu.png");
 	highScoreT = IMG_LoadTexture(renderer, "res/highscoresMenu.png");
+	mainT = IMG_LoadTexture(renderer, "res/main.png");
+	// If above pic is bad, comment above and uncomment below
+	//mainT = IMG_LoadTexture(renderer, "res/main2.png");
 }
 
 void UiInit()
@@ -1247,7 +1251,6 @@ MenuOption DisplayMainMenu(TTF_Font* titleFont, TTF_Font* font)
 	const MenuOption menuTypes[NUMMENU] = { MenuOption::Play, MenuOption::Controls, MenuOption::Highscores, MenuOption::Credits, MenuOption::Quit };
 
 	// Setup background and title
-	SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
 
 	Text titleText;
 	titleText.dstR.w = windowWidth - 100;
@@ -1278,6 +1281,7 @@ MenuOption DisplayMainMenu(TTF_Font* titleFont, TTF_Font* font)
 	SDL_Event eventMenu;
 	while (true) {
 		SDL_RenderClear(renderer);
+		SDL_RenderCopyF(renderer, mainT, 0, 0);
 		while (SDL_PollEvent(&eventMenu)) {
 			switch (eventMenu.type) {
 			case SDL_QUIT:
@@ -1467,17 +1471,17 @@ void RenderControlsMenu(TTF_Font* font) {
 
 void RenderCreditsMenu(TTF_Font* font) {
 	Text authorsText;
-	authorsText.dstR.w = 140;
-	authorsText.dstR.h = 40;
+	authorsText.dstR.w = std::string("Game authors:").length() * LETTER_WIDTH;
+	authorsText.dstR.h = 50;
 	authorsText.dstR.x = windowWidth / 2 - authorsText.dstR.w / 2;
 	authorsText.dstR.y = 0;
-	authorsText.setText(renderer, robotoF, "Game authors:");
+	authorsText.setText(renderer, moonhouseF, "Game authors:", { 255, 0, 0 });
 	authorsText.draw(renderer);
 	std::vector<Text> authors;
 	authors.push_back(Text());
 	authors.back().setText(renderer, robotoF, "Huberti");
 	authors.back().dstR.w = 100;
-	authors.back().dstR.h = 40;
+	authors.back().dstR.h = 50;
 	authors.back().dstR.x = windowWidth / 2 - authors.back().dstR.w / 2;
 	authors.back().dstR.y = authorsText.dstR.y + authorsText.dstR.h;
 	authors.push_back(authors.back());
@@ -1494,9 +1498,9 @@ void RenderCreditsMenu(TTF_Font* font) {
 	authors.back().dstR.w = 140;
 	authors.back().dstR.y = authors[authors.size() - 2].dstR.y + authors[authors.size() - 2].dstR.h;
 	Text externalGraphicsText;
-	externalGraphicsText.setText(renderer, robotoF, "External graphics:");
-	externalGraphicsText.dstR.w = 140;
-	externalGraphicsText.dstR.h = 40;
+	externalGraphicsText.setText(renderer, moonhouseF, "External graphics:", { 0, 255, 0 });
+	externalGraphicsText.dstR.w = std::string("External graphics:").length() * LETTER_WIDTH;
+	externalGraphicsText.dstR.h = 50;
 	externalGraphicsText.dstR.x = windowWidth / 2 - externalGraphicsText.dstR.w / 2;
 	externalGraphicsText.dstR.y = authors.back().dstR.y + authors.back().dstR.h;
 	externalGraphicsText.draw(renderer);
