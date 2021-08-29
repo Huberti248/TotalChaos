@@ -28,7 +28,7 @@ void AudioManager::Release() {
 }
 
 AudioManager::AudioManager() {
-	if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+	if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096) < 0) {
 		printf("SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError());
 	}
 	else {
@@ -41,6 +41,7 @@ AudioManager::~AudioManager() {
 }
 
 void AudioManager::PlayMusic(MusicAudio name, int loops) {
+	this->currentMusic = (int)name;
 	for (int i = 0; i < music.size(); ++i) {
 		if (name == music[i].first) {
 			Mix_PlayMusic(music[i].second, loops);
@@ -62,9 +63,15 @@ void AudioManager::ResumeMusic() {
 }
 
 void AudioManager::StopMusic() {
+	this->currentMusic = 0;
+
 	if (Mix_PlayingMusic() != 0) {
 		Mix_HaltMusic();
 	}
+}
+
+int AudioManager::IsPlaying() {
+	return (int)this->currentMusic;
 }
 
 void AudioManager::PlaySFX(SFXAudio name, int loops, int channel) {
@@ -74,46 +81,92 @@ void AudioManager::PlaySFX(SFXAudio name, int loops, int channel) {
 			return;
 		}
 	}
+
+	printf("Sound played: %d\n", name);
 }
 
 void AudioManager::AudioInit() {
+	currentMusic = 0;
 
 	music.push_back(std::make_pair<MusicAudio, Mix_Music*>(
-		MusicAudio::Background, 
+		MusicAudio::UIMusic, 
 		Mix_LoadMUS("res/music/ost1.ogg")
 		)
 	);
 
+	music.push_back(std::make_pair<MusicAudio, Mix_Music*>(
+		MusicAudio::BattleMusic,
+		Mix_LoadMUS("res/music/ost2.ogg")
+		)
+	);
+
 	sfx.push_back(std::make_pair<SFXAudio, Mix_Chunk*>(
-		SFXAudio::UI,
-		Mix_LoadWAV("res/sound\ fx/ui.ogg")
+		SFXAudio::UISuccess,
+		Mix_LoadWAV("res/sound\ fx/ui_click_success.ogg")
+		)
+	);
+
+	sfx.push_back(std::make_pair<SFXAudio, Mix_Chunk*>(
+		SFXAudio::UIFail,
+		Mix_LoadWAV("res/sound\ fx/ui_click_fail.ogg")
+		)
+	);
+
+	sfx.push_back(std::make_pair<SFXAudio, Mix_Chunk*>(
+		SFXAudio::MenuSuccess,
+		Mix_LoadWAV("res/sound\ fx/menu_click_success.ogg")
+		)
+	);
+
+	sfx.push_back(std::make_pair<SFXAudio, Mix_Chunk*>(
+		SFXAudio::MenuFail,
+		Mix_LoadWAV("res/sound\ fx/menu_click_fail.ogg")
+		)
+	);
+
+	sfx.push_back(std::make_pair<SFXAudio, Mix_Chunk*>(
+		SFXAudio::EnemyHit,
+		Mix_LoadWAV("res/sound\ fx/bullet_hit.ogg")
 		)
 	);
 
 	sfx.push_back(std::make_pair<SFXAudio, Mix_Chunk*>(
 		SFXAudio::EnemyDeath,
-		Mix_LoadWAV("res/sound\ fx/explosion.ogg")
-		)
-	);
-
-	sfx.push_back(std::make_pair<SFXAudio, Mix_Chunk*>(
-		SFXAudio::PlayerFire,
-		Mix_LoadWAV("res/sound\ fx/gun_sound_3.ogg")
+		Mix_LoadWAV("res/sound\ fx/enemy_ship_destroyed.ogg")
 		)
 	);
 
 	sfx.push_back(std::make_pair<SFXAudio, Mix_Chunk*>(
 		SFXAudio::EnemyFire,
-		Mix_LoadWAV("res/sound\ fx/gun_sound_1.ogg")
+		Mix_LoadWAV("res/sound\ fx/enemy_weapon_1.ogg")
+		)
+	);
+
+	sfx.push_back(std::make_pair<SFXAudio, Mix_Chunk*>(
+		SFXAudio::PlayerDeath,
+		Mix_LoadWAV("res/sound\ fx/player_ship_destroyed.ogg")
+		)
+	);
+
+	sfx.push_back(std::make_pair<SFXAudio, Mix_Chunk*>(
+		SFXAudio::PlayerFire1,
+		Mix_LoadWAV("res/sound\ fx/player_weapon_1.ogg")
+		)
+	);
+
+	sfx.push_back(std::make_pair<SFXAudio, Mix_Chunk*>(
+		SFXAudio::PlayerFire2,
+		Mix_LoadWAV("res/sound\ fx/player_weapon_2.ogg")
 		)
 	);
 
 	sfx.push_back(std::make_pair<SFXAudio, Mix_Chunk*>(
 		SFXAudio::PlayerHit,
-		Mix_LoadWAV("res/sound\ fx/hit.ogg")
+		Mix_LoadWAV("res/sound\ fx/bullet_hit_player.ogg")
 		)
 	);
 
 	Mix_Volume(-1, VOLUME);
+	Mix_VolumeMusic(MUSIC_VOLUME);
 	Mix_AllocateChannels(MAX_CHANNELS);
 }

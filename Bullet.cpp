@@ -4,6 +4,8 @@ Bullet::Bullet(int targetMask) {
 	this->targetMask = (TargetMask)targetMask;
     this->lifetime = 0.0f;
     this->bouncedOffShield = false;
+    this->r.h = 29;
+    this->r.w = 29;
 }
 
 void Bullet::Split(std::vector<Bullet>* bulletListRef) {

@@ -1,7 +1,7 @@
 #pragma once
 #include <SDL.h>
 
-#define LETTER_WIDTH 20
+#define LETTER_WIDTH 30
 #define POINTER_OFFSET 30
 #define BUTTON_SELECTED {200, 200, 0}
 #define BUTTON_UNSELECTED {255, 255, 255}
@@ -14,6 +14,8 @@
 
 #define GAMEOVER_NUM_OPTIONS 2
 #define GAMEOVER_MENU_BUTTON_PADDING 15
+
+#define HIGHSCORE_WIDTH 280
 
 enum class MenuOption {
 	Play = 1,
@@ -34,5 +36,8 @@ void CalculateButtonPosition(
 	const float height, 
 	float paddingVertical = 0);
 
-
-
+void CalculateHighScorePosition(
+	SDL_FRect* dstButton,
+	SDL_FRect* scorePos,
+	int index
+);

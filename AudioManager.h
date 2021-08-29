@@ -7,17 +7,25 @@
 #include <vector>
 
 #define VOLUME 100
+#define MUSIC_VOLUME 70
 #define MAX_CHANNELS 25
 
 enum class MusicAudio {
-	Background = 0
+	UIMusic = 0,
+	BattleMusic
 };
 
 enum class SFXAudio {
-	UI = 0,
+	UISuccess = 0,
+	UIFail,
+	MenuSuccess,
+	MenuFail,
+	EnemyHit,
 	EnemyDeath,
-	PlayerFire,
 	EnemyFire,
+	PlayerDeath,
+	PlayerFire1,
+	PlayerFire2,
 	PlayerHit
 };
 
@@ -32,6 +40,12 @@ public:
 	void ResumeMusic();
 	void StopMusic();
 
+	/// <summary>
+	/// Gets the music that is currently playing if any
+	/// </summary>
+	/// <returns></returns>
+	int IsPlaying();
+
 	void PlaySFX(SFXAudio name, int loops = 0, int channel = -1);
 
 private:
@@ -44,5 +58,7 @@ private:
 
 	std::vector<std::pair<MusicAudio, Mix_Music*>> music;
 	std::vector<std::pair<SFXAudio, Mix_Chunk*>> sfx;
+	
+	int currentMusic;
 };
 
