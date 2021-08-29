@@ -56,15 +56,15 @@ std::vector<SDL_FRect> portalRects;
 Clock portalClock;
 bool menuRunning = false;
 MenuButton pauseOptions[PAUSE_NUM_OPTIONS];
-const std::string pauseLabels[PAUSE_NUM_OPTIONS] = { 
-    "Resume", 
-    "Return to Main Menu", 
-    "Quit to Desktop" 
+const std::string pauseLabels[PAUSE_NUM_OPTIONS] = {
+    "Resume",
+    "Return to Main Menu",
+    "Quit to Desktop"
 };
-const MenuOption pauseMenuTypes[PAUSE_NUM_OPTIONS] = { 
-    MenuOption::Resume,  
-    MenuOption::Main, 
-    MenuOption::Quit 
+const MenuOption pauseMenuTypes[PAUSE_NUM_OPTIONS] = {
+    MenuOption::Resume,
+    MenuOption::Main,
+    MenuOption::Quit
 };
 Text pauseTitleText;
 SDL_FRect pauseContainer;
@@ -74,11 +74,11 @@ bool pausing = false;
 bool pauseKeyHeld = false;
 MenuButton gameOverOptions[GAMEOVER_NUM_OPTIONS];
 const std::string gameOverLabels[GAMEOVER_NUM_OPTIONS] = {
-    "Play Again",  
+    "Play Again",
     "Return to Main Menu"
 };
 const MenuOption gameOverMenuTypes[GAMEOVER_NUM_OPTIONS] = {
-    MenuOption::Restart,   
+    MenuOption::Restart,
     MenuOption::Main
 };
 Text gameOverTitleText;
@@ -150,6 +150,11 @@ void RenderControlsMenu(TTF_Font* font);
 void ControlsInit(TTF_Font* titleFont, TTF_Font* font);
 
 void HandleMenuOption(MenuOption option);
+
+float clamp(float n, float lower, float upper)
+{
+    return std::max(lower, std::min(n, upper));
+}
 
 void mainLoop()
 {
@@ -449,11 +454,11 @@ int main(int argc, char* argv[])
             GlobalsInit();
             ClocksInit();
 
-            while (gameRunning) {
-                mainLoop();
-            }
-        }
+    while (gameRunning) {
+        mainLoop();
     }
+    }
+}
 #endif
     // TODO: On mobile remember to use eventWatch function (it doesn't reach this code when terminating)
     return 0;
@@ -775,8 +780,8 @@ void EntityMovement(const SDL_FRect& extendedWindowR, float deltaTime)
     //Player movement
     player.r.x += player.dx * deltaTime * PLAYER_SPEED;
     player.r.y += player.dy * deltaTime * PLAYER_SPEED;
-    player.r.x = std::clamp(player.r.x, 0.0f, windowWidth - player.r.w);
-    player.r.y = std::clamp(player.r.y, 0.0f, windowHeight - player.r.h);
+    player.r.x = clamp(player.r.x, 0.0f, windowWidth - player.r.w);
+    player.r.y = clamp(player.r.y, 0.0f, windowHeight - player.r.h);
 
     //Enemy movement
     for (int i = 0; i < enemies.size(); ++i) {
@@ -1233,7 +1238,8 @@ void RenderPauseMenu(TTF_Font* font)
     }
 }
 
-void PauseInit(TTF_Font* titleFont, TTF_Font* font) {
+void PauseInit(TTF_Font* titleFont, TTF_Font* font)
+{
     // Setup background and title
     pauseContainer.w = windowWidth / 2.0f - 75;
     pauseContainer.h = windowHeight;
@@ -1284,7 +1290,8 @@ void RenderGameOverMenu(TTF_Font* font)
     }
 }
 
-void GameOverInit(TTF_Font* titleFont, TTF_Font* font) {
+void GameOverInit(TTF_Font* titleFont, TTF_Font* font)
+{
     // Setup background and title
     gameOverContainer.w = windowWidth;
     gameOverContainer.h = windowHeight;
@@ -1310,17 +1317,18 @@ void GameOverInit(TTF_Font* titleFont, TTF_Font* font) {
         gameOverOptions[i].buttonText.setText(renderer, font, gameOverOptions[i].label, BUTTON_UNSELECTED);
 
         gameOverLargest = std::max(gameOverLargest, gameOverOptions[i].buttonText.dstR.w);;
-    }    
+    }
 }
 
-void RenderControlsMenu(TTF_Font* font) {
+void RenderControlsMenu(TTF_Font* font)
+{
     SDL_RenderCopyF(renderer, controlsT, 0, 0);
     SDL_SetRenderDrawColor(renderer, 60, 60, 60, SDL_ALPHA_OPAQUE);
-    SDL_RenderFillRectF(renderer, &controlsTitleContainer);  
+    SDL_RenderFillRectF(renderer, &controlsTitleContainer);
 
     SDL_SetRenderDrawColor(renderer, 60, 60, 60, SDL_ALPHA_OPAQUE);
     SDL_RenderFillRectF(renderer, &controlsOptionContainer);
-    
+
     controlsTitleText.draw(renderer);
 
     if (controlsOptions.selected) {
@@ -1333,7 +1341,8 @@ void RenderControlsMenu(TTF_Font* font) {
     controlsOptions.buttonText.draw(renderer);
 }
 
-void ControlsInit(TTF_Font* titleFont, TTF_Font* font) {
+void ControlsInit(TTF_Font* titleFont, TTF_Font* font)
+{
     // Setup background and title
     controlsTitleContainer.w = 500;
     controlsTitleContainer.h = 100;
@@ -1359,57 +1368,57 @@ void ControlsInit(TTF_Font* titleFont, TTF_Font* font) {
     controlsOptions.buttonText.dstR.x = controlsOptionContainer.x + controlsOptionContainer.w / 2.0f - controlsOptions.buttonText.dstR.w / 2.0f;
     controlsOptions.buttonText.dstR.y = controlsOptionContainer.y + controlsOptionContainer.h / 2.0f - controlsOptions.buttonText.dstR.h / 2.0f;
     controlsOptions.buttonText.setText(renderer, font, controlsOptions.label, BUTTON_UNSELECTED);
-
 }
 
 void HandleMenuOption(MenuOption option)
 {
     switch (option) {
-        case MenuOption::Play:
-            gameRunning = true;
-            audioManager->PlayMusic(MusicAudio::Background);
-            state = State::Gameplay;
-            break;
-        case MenuOption::Credits:
-            gameRunning = true;
-            state = State::Credits;
-            break;
-        case MenuOption::Restart:
-            restart = true;
-            gameRunning = false;
-            audioManager->StopMusic();
-            audioManager->PlayMusic(MusicAudio::Background);
-            break;
-        case MenuOption::Resume:
-            pausing = false;
-            pauseKeyHeld = false;
-            audioManager->ResumeMusic();
-            break;
-        case MenuOption::Controls:
-            gameRunning = false;
-            controlsMenu = true;
-            menuRunning = true;
-            break;
-        case MenuOption::Highscores:
-            gameRunning = false;
-            break;
-        case MenuOption::Main:
-            gameRunning = false;
-            restart = false;
-            menuRunning = false;
-            audioManager->StopMusic();
-            break;
-        case MenuOption::Quit:
-            gameRunning = false;
-            appRunning = false;
-            menuRunning = false;
-            audioManager->StopMusic();
-            audioManager->Release();
-            break;
+    case MenuOption::Play:
+        gameRunning = true;
+        audioManager->PlayMusic(MusicAudio::Background);
+        state = State::Gameplay;
+        break;
+    case MenuOption::Credits:
+        gameRunning = true;
+        state = State::Credits;
+        break;
+    case MenuOption::Restart:
+        restart = true;
+        gameRunning = false;
+        audioManager->StopMusic();
+        audioManager->PlayMusic(MusicAudio::Background);
+        break;
+    case MenuOption::Resume:
+        pausing = false;
+        pauseKeyHeld = false;
+        audioManager->ResumeMusic();
+        break;
+    case MenuOption::Controls:
+        gameRunning = false;
+        controlsMenu = true;
+        menuRunning = true;
+        break;
+    case MenuOption::Highscores:
+        gameRunning = false;
+        break;
+    case MenuOption::Main:
+        gameRunning = false;
+        restart = false;
+        menuRunning = false;
+        audioManager->StopMusic();
+        break;
+    case MenuOption::Quit:
+        gameRunning = false;
+        appRunning = false;
+        menuRunning = false;
+        audioManager->StopMusic();
+        audioManager->Release();
+        break;
     }
 }
 
-void menuMainLoop() {
+void menuMainLoop()
+{
     SDL_Event event;
 
     SDL_FRect extendedWindowR;

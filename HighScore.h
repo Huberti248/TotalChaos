@@ -11,7 +11,7 @@ public:
 	HighScores() {}
 	~HighScores() {}
 
-	void HighScores::WriteHighScore(std::tuple<int, const char*> scoreNamePair, const std::tuple<int, const char*>*& scores);
+	void WriteHighScore(std::tuple<int, const char*> scoreNamePair, const std::tuple<int, const char*>*& scores);
 
 	static void ReadScores(std::tuple<int, const char*>** scorePairsRef);
 

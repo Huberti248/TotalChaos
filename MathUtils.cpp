@@ -76,8 +76,8 @@ SDL_FPoint MathUtils::VectorSubstract(const SDL_FPoint& a, const SDL_FPoint& b) 
 
 SDL_FPoint MathUtils::VectorSubstract(const SDL_Point& a, const SDL_Point& b) {
 	SDL_FPoint res = {
-		a.x - b.x,
-		a.y - b.y
+        static_cast<float>(a.x - b.x),
+        static_cast<float>(a.y - b.y)
 	};
 	return res;
 }
