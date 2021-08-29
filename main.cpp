@@ -533,7 +533,7 @@ void UiInit()
 	shieldHealthText.setText(renderer, robotoF, sText, { 255, 255, 255 });
 
 	
-	killStreakText.dstR.w = 60;
+	killStreakText.dstR.w = 100;
 	killStreakText.dstR.h = 30;
 	killStreakText.dstR.x = windowWidth / 4 - killStreakText.dstR.w / 4;
 	killStreakText.dstR.y = 0;
@@ -547,7 +547,7 @@ void UiInit()
 	bombText.dstR.y = 0;
 	bombText.setText(renderer, robotoF, "[LEFT CLICK FOR BOMB]", {255, 0, 0});
 
-	shotgunAmmoText.dstR.w = 100;
+	shotgunAmmoText.dstR.w = 120;
 	shotgunAmmoText.dstR.h = 30;
 	shotgunAmmoText.dstR.x = windowWidth / 30 - shieldPriceText.dstR.w / 30;
 	shotgunAmmoText.dstR.y = 0;
