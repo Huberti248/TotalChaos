@@ -1,0 +1,2 @@
+Permanent powerups:
+- The bullet speed powerup will only affect blue bullets, not red or purple, this in order to balance the game (it would be too difficult wo play otherwise, and that would not encourage the player to keep doing so), maybe if you really want it, make the purple ones faster as well, but test this with some player first.

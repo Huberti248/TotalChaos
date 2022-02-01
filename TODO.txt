@@ -1,0 +1,13 @@
+- Add bossfight
+- Change how bullet speed is managed (right now it is a constant on the for loop when instantiating bullets, change it to a property of the bullet itself to go further with the appropriate layer, so maybe a function called MoveBullet())
+- Add logger - Done
+- Complete inheritance of virtual functions - Replaced
+- Start working on the bullet time powerup
+- Start working on the UI for permanent power ups
+- Unique bullet collision cooldown (sometimes bullets will collide with each other too fast for them to be counted as separate bounces)
+
+Optional:
+- Make delta time an engine variable
+
+Optimization:
+- Check what method takes the most of our CPU and attempt to delegate it to memory
