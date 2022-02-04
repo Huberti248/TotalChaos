@@ -1,6 +1,7 @@
 #pragma once
 #include "Entity.h"
 #include "../Auxiliars/MathUtils.h"
+#include "../Engine/WindowManager.h"
 
 //TODO: Replace with a static variable to use it with the powerups
 #define PLAYER_SPEED 0.3
@@ -11,14 +12,16 @@ public:
 	static float maxHealth;
 
 	int shotgunAmmo;
-	bool hasBomb;
 	bool buyingShield;
 	bool buyingShotgun;
+	bool hasBomb;
+	bool hasShield;
+	bool hasShotgun;
 	unsigned int streak;
 
 	Player();
 
-	Player(int health);
+	void ResetPlayer();
 
 	int GetHealth();
 
@@ -27,6 +30,8 @@ public:
 	void SetHealth(int health);
 
 	void MoveBehaviour(int windowWidth, int windowHeight);
+
+	virtual SDL_Texture* GetTexture() override;
 
 private:
 	int health;

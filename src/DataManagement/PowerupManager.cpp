@@ -40,6 +40,7 @@ void PowerupManager::ReadPowerUps(std::map<std::string, std::string>* nameAndAtt
 		(*nameAndAttributeRef)[lineParts[0]] = lineParts[1];
 		(*attributeAnValueRef)[lineParts[1]] = (float)atof(lineParts[2].c_str());
 	}
+	powerUpsFile.close();
 }
 
 void PowerupManager::ReadPowerUps(std::map<std::string, float>* attributeAnValueRef) {
@@ -55,4 +56,5 @@ void PowerupManager::ReadPowerUps(std::map<std::string, float>* attributeAnValue
 		auto lineParts = StringUtils::SplitString(decrypted, ',');
 		(*attributeAnValueRef)[lineParts[1]] = (float)atof(lineParts[2].c_str());
 	}
+	powerUpsFile.close();
 }

@@ -48,3 +48,15 @@ void Planet::MovePlanetGroup(std::vector<Planet>* planets,
 		}
 	}
 }
+
+SDL_Texture* Planet::GetTexture() {
+	switch (this->planetType) {
+		case PlanetType::Shield:
+			return TextureLoader::GetTextureByName("ShieldPlanet");
+		case PlanetType::Weapon:
+			return TextureLoader::GetTextureByName("WeaponPlanet");
+		default:
+			LOG_CAT_LN("There were no textures found for the planet type: ", (int)this->planetType);
+			return nullptr;
+	}
+}

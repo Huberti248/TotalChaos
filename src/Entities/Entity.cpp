@@ -8,3 +8,8 @@ bool Entity::operator==(const Entity& other) {
 Entity::Entity(){}
 
 Entity::~Entity() { }
+
+SDL_Texture* Entity::GetTexture() {
+    LOG_LN("Get texture not implemented in basic entity!!!");
+    return nullptr;
+}

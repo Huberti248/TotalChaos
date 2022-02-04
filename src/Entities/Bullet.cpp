@@ -65,3 +65,17 @@ void Bullet::MoveBulletGroup(std::vector<Bullet>* bullets) {
 		b->r.x += b->dx * deltaTime * b->GetBulletSpeed();
 	}
 }
+
+SDL_Texture* Bullet::GetTexture() {
+	switch ((int)this->targetMask) {
+		case TargetMask::PlayerMask:
+			return TextureLoader::GetTextureByName("RedBullet");
+		case TargetMask::EnemiesMask:
+			return TextureLoader::GetTextureByName("BlueBullet");
+		case (TargetMask::PlayerMask | TargetMask::EnemiesMask):
+			return TextureLoader::GetTextureByName("PurpleBullet");
+		default:
+			LOG_CAT_LN("There were no textures found for the type of bullet: ", (int)this->targetMask);
+			return nullptr;
+	}
+}

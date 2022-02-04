@@ -13,11 +13,13 @@ enum TargetMask {
 
 class Bullet : public Entity{
 public:
+
 	static float sizeDecreaseRatePlayer;
 	static float sizeDecreaseRateEnemy;
+	
 	static float playerBulletSpeed;
 	static float enemyBulletSpeed;
-
+	
 	Clock shieldBounceDelay;
 
 	float lifetime;
@@ -35,7 +37,10 @@ public:
 
 	static void MoveBulletGroup(std::vector<Bullet>* bullets);
 
+	virtual SDL_Texture* GetTexture() override;
+
 private:
+	
 	TargetMask targetMask;
 	float originalWidth;
 	float originalHeight;

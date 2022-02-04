@@ -25,6 +25,8 @@ public:
 	static void MovePlanetGroup(std::vector<Planet>* planets, 
 		Player* player, const SDL_FRect& extendedWindowR, SDL_bool(*intersects)(const SDL_FRect* a, const SDL_FRect* b));
 
+	virtual SDL_Texture* GetTexture() override;
+
 private:
 	PlanetType planetType;
 };

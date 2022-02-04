@@ -8,6 +8,8 @@
 //TODO: Replace with variable to use in power ups
 #define ENEMY_SPEED 0.1
 
+//TODO: Create enemy type enum instead of new classes
+
 class Enemy : public Entity {
 public:
 	SpawnPlace spawnPlace = SpawnPlace::Up;
@@ -18,6 +20,7 @@ public:
 
 	static void MoveEnemyGroup(std::vector<Enemy>* enemies);
 
+	virtual SDL_Texture* GetTexture() override;
 
 private:
 	Clock shootingClock;

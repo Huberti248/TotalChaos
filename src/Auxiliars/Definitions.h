@@ -14,6 +14,7 @@
 #include "../DataManagement/Crypto.h"
 #include "../DataManagement/HighScore.h"
 #include "../DataManagement/PowerupManager.h"
+#include "../DataManagement/TextureLoader.h"
 
 //240 x 240 (smart watch)
 //240 x 320 (QVGA)
@@ -33,10 +34,6 @@
 #define BOMB_RADIUS 500
 #define SHOTGUN_MAX_AMMO 21
 
-
-int windowWidth = 1280;
-int windowHeight = 720;
-
 SDL_Point mousePos;
 SDL_Point realMousePos;
 SDL_Point pauseMosPos;
@@ -46,3 +43,97 @@ TTF_Font* robotoF;
 TTF_Font* moonhouseF;
 bool gameRunning = true;
 bool appRunning = true;
+
+SDL_Texture* bgT;
+SDL_Texture* meatT;
+SDL_Texture* explosionT;
+SDL_Texture* buyT;
+SDL_Texture* shieldT;
+SDL_Texture* closeT;
+SDL_Texture* coinsT;
+SDL_Texture* uiSelectedT;
+SDL_Texture* portalT;
+SDL_Texture* shotgunT;
+SDL_Texture* controlsT;
+SDL_Texture* highScoreT;
+SDL_Texture* mainT;
+
+#pragma region Defined Methods
+void AssociateTexturesToPtrs() {
+	std::map<const char*, SDL_Texture**> textureAssociationMap = {
+		{"Background", &bgT},
+		{"Meat", &meatT},
+		{"Gun", &explosionT},
+		{"Portal", &portalT},
+		{"Buy", &buyT},
+		{"Shield", &shieldT},
+		{"Close", &closeT},
+		{"Coin", &coinsT},
+		{"Shotgun", &shotgunT},
+		{"ControlsMenu", &controlsT},
+		{"HighScoresMenu", &highScoreT},
+		{"Main", &mainT}
+	};
+
+	for (auto& [k, v] : textureAssociationMap)
+		*v = TextureLoader::GetTextureByName(k);
+}
+#pragma endregion
+
+#pragma region Declared Methods
+void WindowInit();
+
+void GlobalsInit();
+
+void mainLoop();
+
+void TexturesInit();
+
+void UiInit();
+
+void ClocksInit();
+
+void BounceOff(Entity* a, Entity* b, bool affectB);
+
+void InputEvents(const SDL_Event& event);
+
+void EnemySpawn();
+
+void EntityMovement(const SDL_FRect& extendedWindowR);
+
+void BulletCollisions(const SDL_FRect& extendedWindowR);
+
+void EnemyBehavior(const SDL_FRect& extendedWindowR);
+
+void PowerUpSpawner();
+
+void RenderAll();
+
+void FireWhenReady();
+
+MenuOption DisplayMainMenu(TTF_Font* titleFont, TTF_Font* font);
+
+void RenderPauseMenu(TTF_Font* font);
+
+void PauseInit(TTF_Font* titleFont, TTF_Font* font);
+
+void RenderGameOverMenu(TTF_Font* font);
+
+void GameOverInit(TTF_Font* titleFont, TTF_Font* font);
+
+void RenderControlsMenu(TTF_Font* font);
+
+void RenderCreditsMenu(TTF_Font* font);
+
+void RenderHighScoresMenu(TTF_Font* titleFont, TTF_Font* font);
+
+void ControlsInit(TTF_Font* titleFont, TTF_Font* font);
+
+void HandleMenuOption(MenuOption option);
+
+void CheckAndAddHighScore(int score);
+
+void ScoreKill();
+
+void ShiftScores(const std::tuple<int, std::string>& toInsert);
+#pragma endregion

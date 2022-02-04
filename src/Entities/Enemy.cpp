@@ -45,3 +45,7 @@ void Enemy::MoveEnemyGroup(std::vector<Enemy>* enemies) {
 		e->r.y += e->dy * deltaTime * ENEMY_SPEED;
 	}
 }
+
+SDL_Texture* Enemy::GetTexture() {
+	return TextureLoader::GetTextureByName("Enemy");
+}
