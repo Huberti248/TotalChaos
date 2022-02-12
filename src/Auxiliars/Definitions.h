@@ -15,7 +15,7 @@
 #include "../DataManagement/HighScore.h"
 #include "../DataManagement/PowerupManager.h"
 #include "../DataManagement/TextureLoader.h"
-
+#include "../DataManagement/LevelingManager.h"
 //240 x 240 (smart watch)
 //240 x 320 (QVGA)
 //360 x 640 (Galaxy S5)
@@ -93,7 +93,14 @@ void UiInit();
 
 void ClocksInit();
 
-void BounceOff(Entity* a, Entity* b, bool affectB);
+/// <summary>
+/// Bounces one or two bullets off an entity
+/// </summary>
+/// <param name="a">Bullet to be bounced</param>
+/// <param name="b">Entity to be bounced off (could be a bullet)</param>
+/// <param name="affectB">True if the B parameter is also a bullet</param>
+/// <returns>True if either of the bullets was destroyed</returns>
+bool BounceOff(Entity* a, Entity* b, bool affectB);
 
 void InputEvents(const SDL_Event& event);
 

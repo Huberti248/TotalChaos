@@ -3,6 +3,12 @@
 Enemy::Enemy(int shootingInterval) {
 	this->shootingInterval = shootingInterval;
 	this->shootingClock.restart();
+	this->r.w = 32;
+	this->r.h = 32;
+	this->spawnPlace = (SpawnPlace)MathUtils::Random(0, 3);
+	AssignRandomType();
+	this->originalHeight = this->r.h;
+	this->originalWidth = this->r.w;
 }
 
 void Enemy::Combat(SDL_Texture* enemyTexture, std::vector<Bullet>* bulletListRef, const SDL_FPoint& playerPos, SDL_Renderer* renderer) {
@@ -46,6 +52,39 @@ void Enemy::MoveEnemyGroup(std::vector<Enemy>* enemies) {
 	}
 }
 
+void Enemy::HandleInstanceDmg(std::vector<Enemy>* enemies, size_t instanceIndex) {
+	bool shouldDie = (*enemies).at(instanceIndex).TakeDamage();
+	if (shouldDie)
+		enemies->erase(enemies->begin() + instanceIndex);
+}
+
 SDL_Texture* Enemy::GetTexture() {
-	return TextureLoader::GetTextureByName("Enemy");
+	switch (this->type) {
+		case EnemyType::Default:
+			return TextureLoader::GetTextureByName("Enemy");
+
+		case EnemyType::Tank:
+			return TextureLoader::GetTextureByName("TankEnemy");
+
+		case EnemyType::Follower:
+			return TextureLoader::GetTextureByName("FollowerEnemy");
+
+		default:
+			LOG_LN("Invalid enemy type!");
+			return nullptr;
+	}
+}
+
+bool Enemy::TakeDamage() {
+	//Check if it's a proper enemy type
+	if (this->type != EnemyType::Tank) return true;
+	//Now decrease the entity's size and check if we are below 30%
+}
+
+void Enemy::AssignRandomType() {
+	this->type = EnemyType::Default; //TODO: Actually randomly assign this
+	if (this->type == EnemyType::Tank) {
+		this->r.w = 64;
+		this->r.h = 64;
+	}
 }

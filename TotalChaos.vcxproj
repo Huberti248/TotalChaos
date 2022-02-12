@@ -98,6 +98,7 @@
     <ClCompile Include="src\Auxiliars\StringUtils.cpp" />
     <ClCompile Include="src\DataManagement\Crypto.cpp" />
     <ClCompile Include="src\DataManagement\HighScore.cpp" />
+    <ClCompile Include="src\DataManagement\LevelingManager.cpp" />
     <ClCompile Include="src\DataManagement\PowerupManager.cpp" />
     <ClCompile Include="src\DataManagement\TextureLoader.cpp" />
     <ClCompile Include="src\Engine\AudioManager.cpp" />
@@ -115,6 +116,7 @@
     <ClCompile Include="vendor\PUGIXML\src\pugixml.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Auxiliars\GameManager.h" />
     <ClInclude Include="src\Auxiliars\MathUtils.h" />
     <ClInclude Include="src\Auxiliars\SdlDefinitions.h" />
     <ClInclude Include="src\Auxiliars\SpawnPlace.h" />

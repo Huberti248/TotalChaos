@@ -12,8 +12,6 @@
 
 class LevelingManager {
 public:
-	static float currentXP;
-	static int currentSP;
 	
 	LevelingManager() {};
 	~LevelingManager() {};
@@ -21,6 +19,15 @@ public:
 	static void ReadAndInitializeExperience();
 
 	static void SaveExperience();
+
+	static float GetXP();
+
+	static int GetSP();
+
+	static void IncreaseXP(int killStreak);
+
 private:
 	static inline std::string ek = "XwOc5KBFezhzViaoVWhdHPWT2";
+	static float currentXP;
+	static int currentSP;
 };

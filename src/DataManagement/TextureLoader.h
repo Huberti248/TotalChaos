@@ -24,6 +24,8 @@ private:
 		{"RedBullet", nullptr},
 		{"PurpleBullet", nullptr},
 		{"Enemy", nullptr},
+		{"TankEnemy", nullptr},
+		{"FollowerEnemy", nullptr},
 		{"ShieldPlanet", nullptr},
 		{"WeaponPlanet", nullptr},
 		{"Background", nullptr},

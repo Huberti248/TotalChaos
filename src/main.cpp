@@ -305,7 +305,9 @@ void mainLoop() {
 }
 
 void GlobalsInit() {
+	//Right here we call all the data management functions
 	PowerupManager::InitializePowerUps();
+	LevelingManager::ReadAndInitializeExperience();
 	//Refactor this to an reset function on each entity
 	player.ResetPlayer();
 
@@ -363,6 +365,7 @@ int main(int argc, char* argv[])
 		if (!restart) {
 			MenuOption buttonType = DisplayMainMenu(moonhouseF, robotoF);
 			HandleMenuOption(buttonType);
+			
 		}
 		else {
 			gameRunning = true;
@@ -373,6 +376,8 @@ int main(int argc, char* argv[])
 
 		while (gameRunning) {
 			mainLoop();
+			float toDelay = Clock::CalculateDelay(Clock::GetDeltaTime());
+			SDL_Delay(toDelay);
 		}
 	}
 #endif
@@ -529,7 +534,9 @@ void WindowInit()
 	SDL_SetRenderDrawBlendMode(SdlUtils::renderer, SDL_BLENDMODE_BLEND);
 }
 
-void BounceOff(Entity* a, Entity* b, bool affectB) {
+bool BounceOff(Entity* a, Entity* b, bool affectB) {
+	bool wasDeleted = false;
+
 	float v1 = MathUtils::GetMagnitude(a->dx, a->dy);
 	float v2 = MathUtils::GetMagnitude(b->dx, b->dy);
 
@@ -555,13 +562,14 @@ void BounceOff(Entity* a, Entity* b, bool affectB) {
 	bool shouldRemove = bulletReference->DecreaseSize();
 	
 	if (shouldRemove) {
-		auto foundPos = std::find(bullets.begin(), bullets.end(), *bulletReference);
+		auto foundPos = std::find(bullets.begin(), bullets.end() - 1, *bulletReference);
 		bullets.erase(foundPos);
+		wasDeleted = true;
 	}
 
 	//This is the case for the shield
 	if (!affectB)
-		return;
+		return wasDeleted;
 	b->dx = directionB.x;
 	b->dy = directionB.y;
 	
@@ -569,12 +577,15 @@ void BounceOff(Entity* a, Entity* b, bool affectB) {
 	shouldRemove = bulletReference->DecreaseSize();
 
 	if (shouldRemove) {
-		auto foundPos = std::find(bullets.begin(), bullets.end(), *bulletReference);
+		auto foundPos = std::find(bullets.begin(), bullets.end() - 1, *bulletReference);
 		bullets.erase(foundPos);
+		wasDeleted = true;
 	}
+	return wasDeleted;
 }
 
 void InputEvents(const SDL_Event& event) {
+	//TODO: Refactor to switch
 	if (event.type == SDL_QUIT) {
 		gameRunning = false;
 		appRunning = false;
@@ -743,9 +754,6 @@ void EnemySpawn() {
 		//Create a random interval for the shooting between a range defined by constants
 		int bulletInterval = MathUtils::Random(MINIMUM_INTERVAL_BULLET_MS, MAXIMUM_INTERVAL_BULLET_MS);
 		enemies.push_back(Enemy(bulletInterval));
-		enemies.back().r.w = 32;
-		enemies.back().r.h = 32;
-		enemies.back().spawnPlace = (SpawnPlace)MathUtils::Random(0, 3);
 
 		switch (enemies.back().spawnPlace) {
 		case SpawnPlace::Up:
@@ -838,7 +846,7 @@ deleteCollidingBegin:
 					if (shieldHealth <= 0) {
 						player.hasShield = false;
 					}
-					BounceOff(&bullets[i], &player, false);
+					if (BounceOff(&bullets[i], &player, false)) goto deleteCollidingBegin;
 				}
 				else {
 					audioManager->PlaySFX(SFXAudio::PlayerHit);
@@ -866,7 +874,7 @@ deleteCollidingBegin:
 
 				audioManager->PlaySFX(SFXAudio::EnemyHit);
 				audioManager->PlaySFX(SFXAudio::EnemyDeath);
-				enemies.erase(enemies.begin() + j--);
+				Enemy::HandleInstanceDmg(&enemies, j);
 				bullets.erase(bullets.begin() + i--);
 				ScoreKill();
 				goto deleteCollidingBegin;
@@ -882,16 +890,20 @@ deleteCollidingBegin:
 		}
 
 		//Bullet collision
-		if (i != (bullets.size() - 1)) {
+		if (i < (bullets.size() - 1)) {
 			for (int j = i + 1; j < bullets.size(); ++j) {
 				bool timePassed = (bullets.at(i).lifetime > BULLET_COLLISION_DELAY_IN_MS) && (bullets[j].lifetime > BULLET_COLLISION_DELAY_IN_MS);
 				if (SdlUtils::SDL_HasIntersectionF(&bullets.at(i).r, &bullets[j].r) && timePassed) {
-					BounceOff(&bullets.at(i), &bullets[j], true);
+					//If the bullet bounces and gets destroyed, restart the loop
+					if (BounceOff(&bullets.at(i), &bullets[j], true)) goto deleteCollidingBegin;
 				}
 			}
-			if (!SdlUtils::SDL_HasIntersectionF(&bullets.at(i).r, &extendedWindowR)) {
-				bullets.erase(bullets.begin() + i--);
-			}
+		}
+
+		//Window collision
+		if (!SdlUtils::SDL_HasIntersectionF(&bullets.at(i).r, &extendedWindowR)) {
+			bullets.erase(bullets.begin() + i--);
+			goto deleteCollidingBegin;
 		}
 	}
 }
@@ -1124,7 +1136,9 @@ MenuOption DisplayMainMenu(TTF_Font* titleFont, TTF_Font* font)
 	uiSelectedR.h = 32;
 
 	SDL_Event eventMenu;
+	Clock menuClock;
 	while (true) {
+		menuClock.restart();
 		SDL_RenderClear(SdlUtils::renderer);
 		SDL_RenderCopyF(SdlUtils::renderer, mainT, 0, 0);
 		while (SDL_PollEvent(&eventMenu)) {
@@ -1182,6 +1196,7 @@ MenuOption DisplayMainMenu(TTF_Font* titleFont, TTF_Font* font)
 		}
 
 		SDL_RenderPresent(SdlUtils::renderer);
+		SDL_Delay(Clock::CalculateDelay(menuClock.getElapsedTime()));
 	}
 }
 

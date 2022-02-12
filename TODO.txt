@@ -8,7 +8,14 @@ TODO:
 	- Save XP in a file
 	- XP multiplier based on the killstreak that you have
 - Make all of the file paths using crypto hidden
+- Enemies that follow you
+- Enemies with shields
+- Enemies that take longer to take down
+- Shield is way too broken (spawns right after you lose it when you have enough money)
+- Decrease the amount of health pickups give, and this should be an improvable skill
 Optional:
 
 Optimization:
 - Check what method takes the most of our CPU and attempt to delegate it to memory
+- When we exit the game, the GlobalsInit function gets called again, make sure to stop any more resources from allocating
+- Refactor event handling with switch
