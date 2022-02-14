@@ -2,6 +2,7 @@
 //#include "Audio.h"
 #include "../Engine/AudioManager.h"
 #include "../Auxiliars/MathUtils.h"
+#include "../Auxiliars/GameManager.h"
 #include "../Mechanics/Movement.h"
 #include "../UI/Menu.h"
 #include "../Entities/Entity.h"

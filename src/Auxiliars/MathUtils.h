@@ -42,4 +42,6 @@ public:
 
     static int RoundToClosestInteger(float n);
 
+    static bool Between(int value, int lower, int upper);
+
 };

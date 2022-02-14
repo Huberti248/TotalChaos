@@ -115,3 +115,7 @@ int MathUtils::RoundToClosestInteger(float n) {
 	float diff = n - wholePart;
 	return diff < 0.5f ? (int)floor(n) : (int)ceil(n);
 }
+
+bool MathUtils::Between(int value, int lower, int upper) {
+	return value <= upper && value >= lower;
+}

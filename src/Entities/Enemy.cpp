@@ -1,5 +1,6 @@
 #include "Enemy.h"
 
+
 Enemy::Enemy(int shootingInterval) {
 	this->shootingInterval = shootingInterval;
 	this->shootingClock.restart();
@@ -47,8 +48,16 @@ void Enemy::MoveEnemyGroup(std::vector<Enemy>* enemies) {
 	float deltaTime = Clock::GetDeltaTime();
 	for (size_t i = 0; i < enemies->size(); i++) {
 		Enemy* e = &(enemies->at(i));
-		e->r.x += e->dx * deltaTime * ENEMY_SPEED;
-		e->r.y += e->dy * deltaTime * ENEMY_SPEED;
+
+		float movementSpeed = ENEMY_SPEED;
+
+		//If the current enemy is a follower, always direct it to the player
+		if (e->type == EnemyType::Follower) {
+			e->FollowPlayer();
+			movementSpeed *= 2.0f;
+		}
+		e->r.x += e->dx * deltaTime * movementSpeed;
+		e->r.y += e->dy * deltaTime * movementSpeed;
 	}
 }
 
@@ -79,12 +88,49 @@ bool Enemy::TakeDamage() {
 	//Check if it's a proper enemy type
 	if (this->type != EnemyType::Tank) return true;
 	//Now decrease the entity's size and check if we are below 30%
+	
+	this->r.w -= this->originalWidth * 0.1f;
+	this->r.h -= this->originalHeight * 0.1f;
+
+	return floor(this->r.w) <= this->originalWidth * 0.7f;
+}
+
+void Enemy::FollowPlayer() {
+	Player* playerRef = GameManager::playerReference;
+
+	SDL_FPoint playerPos = {
+		playerRef->r.x,
+		playerRef->r.y
+	};
+
+	SDL_FPoint currEnemyPos = {
+		this->r.x,
+		this->r.y
+	};
+
+	//Sub vect (dest - src)
+	SDL_FPoint direction = MathUtils::VectorSubstract(playerPos, currEnemyPos);
+
+	MathUtils::Normalize(&direction);
+
+	this->dx = direction.x;
+	this->dy = direction.y;
+	RotateEntityTowards(this->GetTexture(), *this, playerPos, SdlUtils::renderer);
 }
 
 void Enemy::AssignRandomType() {
 	this->type = EnemyType::Default; //TODO: Actually randomly assign this
-	if (this->type == EnemyType::Tank) {
+	int prob = MathUtils::Random(0, 100);
+	
+	if (MathUtils::Between(prob, 0, DEFAULT_ENEMY_PROB)) {
+		this->type = EnemyType::Default;
+	}
+	else if (MathUtils::Between(prob, DEFAULT_ENEMY_PROB + 1, DEFAULT_ENEMY_PROB + TANK_ENEMY_PROB)) {
+		this->type = EnemyType::Tank;
 		this->r.w = 64;
 		this->r.h = 64;
+	}
+	else {
+		this->type = EnemyType::Follower;
 	}
 }

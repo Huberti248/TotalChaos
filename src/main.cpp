@@ -1,6 +1,7 @@
 #include "Auxiliars/Definitions.h"
 #include "Auxiliars/SdlDefinitions.h"
 
+
 enum class State {
 	Gameplay,
 	Credits,
@@ -113,6 +114,7 @@ void mainLoop() {
 		if (!player.buyingShield && !player.buyingShotgun && !pausing && !gameOver) {
 			player.dx = 0;
 			player.dy = 0;
+			//TODO: If the player can move (and refactor this to a player function)
 			if (keys[SDL_SCANCODE_A]) {
 				player.dx = -1;
 			}
@@ -308,6 +310,7 @@ void GlobalsInit() {
 	//Right here we call all the data management functions
 	PowerupManager::InitializePowerUps();
 	LevelingManager::ReadAndInitializeExperience();
+	GameManager::playerReference = &player;
 	//Refactor this to an reset function on each entity
 	player.ResetPlayer();
 
