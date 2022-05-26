@@ -13,6 +13,11 @@ TODO:
 - Decrease the amount of health pickups give, and this should be an improvable skill
 - Make sure users find the game challenging but not unfair (specially with the enemy variety)
 - When the follower enemies collide with you, they stun you
+- Make three behaviours for spawning enemies:
+	* Easy (higher probability of getting normal enemies with slow paced enemy spawning).
+	* Simple (standard probability of getting either enemies, relatively normal paced enemy spawning).
+	* Extreme (higher probability of getting special enemies with fast paced enemy spawning).
+(Think of this like the plants vs zombies wave system)
 Optional:
 - Maybe make a power up that will change the probability of the types of enemies
 - Maybe the tanks/followers will give you more xp

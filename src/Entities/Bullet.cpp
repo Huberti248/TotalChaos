@@ -3,12 +3,13 @@
 float Bullet::sizeDecreaseRatePlayer = 0.05f;
 float Bullet::sizeDecreaseRateEnemy = 0.05f;
 float Bullet::enemyBulletSpeed = DEFAULT_BULLET_SPEED;
-float Bullet::playerBulletSpeed = DEFAULT_BULLET_SPEED;
+float Bullet::playerBulletSpeed = 0.5f;
 
 Bullet::Bullet(int targetMask) {
 	this->targetMask = (TargetMask)targetMask;
 	this->lifetime = 0.0f;
 	this->bouncedOffShield = false;
+	this->shouldBeRemoved = false;
 	this->r.h = 29;
 	this->r.w = 29;
 	this->originalHeight = r.h;
@@ -50,7 +51,8 @@ bool Bullet::DecreaseSize() {
 	this->r.h -= this->originalHeight * decreaseRate;
 	this->r.w -= this->originalWidth * decreaseRate;
 	//If the bullet gets to 30% of its size, dissappear
-	return this->r.h <= this->originalHeight * 0.7f;
+	this->shouldBeRemoved = this->r.h <= this->originalHeight * 0.7f;
+	return this->shouldBeRemoved;
 }
 
 float Bullet::GetBulletSpeed() {
@@ -63,6 +65,8 @@ void Bullet::MoveBulletGroup(std::vector<Bullet>* bullets) {
 		Bullet* b = &(bullets->at(i));
 		b->r.y += b->dy * deltaTime * b->GetBulletSpeed();
 		b->r.x += b->dx * deltaTime * b->GetBulletSpeed();
+        if (b->shouldBeRemoved)
+			bullets->erase(bullets->begin() + i);
 	}
 }
 

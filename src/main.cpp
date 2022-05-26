@@ -562,13 +562,7 @@ bool BounceOff(Entity* a, Entity* b, bool affectB) {
 	a->dy = directionA.y;
 	
 	Bullet* bulletReference = (Bullet*)a;
-	bool shouldRemove = bulletReference->DecreaseSize();
-	
-	if (shouldRemove) {
-		auto foundPos = std::find(bullets.begin(), bullets.end() - 1, *bulletReference);
-		bullets.erase(foundPos);
-		wasDeleted = true;
-	}
+	bulletReference->DecreaseSize();
 
 	//This is the case for the shield
 	if (!affectB)
@@ -577,14 +571,8 @@ bool BounceOff(Entity* a, Entity* b, bool affectB) {
 	b->dy = directionB.y;
 	
 	bulletReference = (Bullet*)b;
-	shouldRemove = bulletReference->DecreaseSize();
-
-	if (shouldRemove) {
-		auto foundPos = std::find(bullets.begin(), bullets.end() - 1, *bulletReference);
-		bullets.erase(foundPos);
-		wasDeleted = true;
-	}
-	return wasDeleted;
+	bulletReference->DecreaseSize();
+	return false;
 }
 
 void InputEvents(const SDL_Event& event) {
@@ -800,7 +788,7 @@ void EntityMovement(const SDL_FRect& extendedWindowR) {
 		healthPickups[i].r.x += healthPickups[i].dx * deltaTime * PLANET_SPEED;
 		healthPickups[i].r.y += healthPickups[i].dy * deltaTime * PLANET_SPEED;
 		if (SdlUtils::SDL_HasIntersectionF(&player.r, &healthPickups[i].r)) {
-			player.SetHealth(player.GetHealth() + 10);
+			player.SetHealth(player.GetHealth() + 5);
 			healthText.setText(robotoF, player.GetHealth(), { 255, 0, 0 });
 		}
 		if (SdlUtils::SDL_HasIntersectionF(&player.r, &healthPickups[i].r)
@@ -848,6 +836,7 @@ deleteCollidingBegin:
 
 					if (shieldHealth <= 0) {
 						player.hasShield = false;
+						planetClock.restart();
 					}
 					if (BounceOff(&bullets[i], &player, false)) goto deleteCollidingBegin;
 				}
@@ -871,15 +860,15 @@ deleteCollidingBegin:
 			if ((bullets.at(i).GetTargetMask() & TargetMask::EnemiesMask) == 0)
 				continue;
 			if (SdlUtils::SDL_HasIntersectionF(&bullets.at(i).r, &enemies[j].r)) {
-				player.streak++;
-				std::string streakText = "Kill streak: " + std::to_string(player.streak);
-				killStreakText.setText(robotoF, streakText, { 255, 255, 255 });
 
 				audioManager->PlaySFX(SFXAudio::EnemyHit);
 				audioManager->PlaySFX(SFXAudio::EnemyDeath);
 				Enemy::HandleInstanceDmg(&enemies, j);
 				bullets.erase(bullets.begin() + i--);
 				ScoreKill();
+
+				std::string streakText = "Kill streak: " + std::to_string(player.streak);
+				killStreakText.setText(robotoF, streakText, { 255, 255, 255 });
 				goto deleteCollidingBegin;
 			}
 		}
@@ -930,8 +919,7 @@ void EnemyBehavior(const SDL_FRect& extendedWindowR) {
 	}
 }
 
-void PowerUpSpawner()
-{
+void PowerUpSpawner() {
 	if (planetClock.getElapsedTime() > PLANET_SPAWN_DELAY_IN_MS && !player.hasShield) {
 		PlanetType planetType = Planet::RandomPlanetType(player.hasShotgun);
 		planets.push_back(Planet(planetType, WindowManager::GetWindowWidth()));

@@ -4,7 +4,7 @@
 #include <vector>
 
 #define BULLET_SHIELD_BOUNCE_TOLERANCE 200
-#define DEFAULT_BULLET_SPEED 0.5f
+#define DEFAULT_BULLET_SPEED 0.3f
 
 enum TargetMask {
 	PlayerMask = 1,
@@ -44,4 +44,5 @@ private:
 	TargetMask targetMask;
 	float originalWidth;
 	float originalHeight;
+	bool shouldBeRemoved;
 };

@@ -63,8 +63,10 @@ void Enemy::MoveEnemyGroup(std::vector<Enemy>* enemies) {
 
 void Enemy::HandleInstanceDmg(std::vector<Enemy>* enemies, size_t instanceIndex) {
 	bool shouldDie = (*enemies).at(instanceIndex).TakeDamage();
-	if (shouldDie)
+    if (shouldDie) {
 		enemies->erase(enemies->begin() + instanceIndex);
+		GameManager::playerReference->streak++;
+	}
 }
 
 SDL_Texture* Enemy::GetTexture() {
@@ -132,5 +134,6 @@ void Enemy::AssignRandomType() {
 	}
 	else {
 		this->type = EnemyType::Follower;
+		this->shootingInterval /= 3;
 	}
 }
