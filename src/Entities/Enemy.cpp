@@ -29,9 +29,31 @@ void Enemy::Combat(SDL_Texture* enemyTexture, std::vector<Bullet>* bulletListRef
 		this->r.y
 	};
 
-	//Shoot it towards the player
-	SDL_FPoint finalPos = MathUtils::VectorSubstract(playerPos, enPos);
+	
+	SDL_FPoint targetPos;
+	if (this->type == EnemyType::Follower) {
+		targetPos = playerPos;
+	}
+	else {
+		MathUtils::Normalize(&enPos);
+		//Shoot it straight forward
+		switch (this->spawnPlace) {
+		case SpawnPlace::Up:
+			targetPos = MathUtils::VectorAdd({ enPos.x, 0.0f }, MathUtils::WORLD_DOWN);
+			break;
+		case SpawnPlace::Down:
+			targetPos = MathUtils::VectorAdd({ enPos.x, 0.0f }, MathUtils::WORLD_UP);
+			break;
+		case SpawnPlace::Left:
+			targetPos = MathUtils::VectorAdd({ 0.0f, enPos.y }, MathUtils::WORLD_RIGHT);
+			break;
+		case SpawnPlace::Right:
+			targetPos = MathUtils::VectorAdd({ 0.0f, enPos.y }, MathUtils::WORLD_LEFT);
+			break;
+		}
+	}
 
+	SDL_FPoint finalPos = MathUtils::VectorSubstract(targetPos, enPos);
 	MathUtils::Normalize(&finalPos);
 
 	toShoot.dy = finalPos.y;
@@ -54,7 +76,7 @@ void Enemy::MoveEnemyGroup(std::vector<Enemy>* enemies) {
 		//If the current enemy is a follower, always direct it to the player
 		if (e->type == EnemyType::Follower) {
 			e->FollowPlayer();
-			movementSpeed *= 2.0f;
+			movementSpeed *= 1.3f;
 		}
 		e->r.x += e->dx * deltaTime * movementSpeed;
 		e->r.y += e->dy * deltaTime * movementSpeed;

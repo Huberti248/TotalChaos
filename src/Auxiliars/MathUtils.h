@@ -5,6 +5,12 @@
 
 class MathUtils {
 public:
+
+    static const SDL_FPoint WORLD_UP;
+    static const SDL_FPoint WORLD_DOWN;
+    static const SDL_FPoint WORLD_LEFT;
+    static const SDL_FPoint WORLD_RIGHT;
+
     MathUtils();
     ~MathUtils();
     
@@ -22,7 +28,9 @@ public:
 
     static SDL_FPoint GetNormalized(float x, float y);
 
-    static SDL_FPoint GetNormalized(const SDL_Point &point); //Maybe make a version with SDL_FPoint parameters
+    static SDL_FPoint GetNormalized(const SDL_Point &point);
+
+    static SDL_FPoint GetNormalized(const SDL_FPoint &point);
 
     static void Normalize(SDL_FPoint* point);
 
@@ -31,6 +39,8 @@ public:
     static SDL_FPoint VectorSubstract(const SDL_Point& a, const SDL_Point& b);
 
     static void VectorSubstract(SDL_Point* a, const SDL_Point& b);
+
+    static SDL_FPoint VectorAdd(const SDL_FPoint& a, const SDL_FPoint& b);
 
     static float DistanceSqr(const SDL_FPoint& a, const SDL_FPoint& b);
 

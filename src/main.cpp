@@ -127,7 +127,7 @@ void mainLoop() {
 			else if (keys[SDL_SCANCODE_S]) {
 				player.dy = 1;
 			}
-			if (buttons[SDL_BUTTON_LEFT]) {
+			if (buttons[SDL_BUTTON_LEFT] && !player.IsInShrinkMode()) {
 				FireWhenReady();
 			}
 			if (buttons[SDL_BUTTON_RIGHT] && player.hasBomb) {
@@ -538,6 +538,9 @@ void WindowInit()
 }
 
 bool BounceOff(Entity* a, Entity* b, bool affectB) {
+	//First check, if both the bullets are enemies, then we don't go any further
+	if (affectB && ((Bullet*)a)->GetTargetMask() == TargetMask::PlayerMask && ((Bullet*)b)->GetTargetMask() == TargetMask::PlayerMask)
+		return false;
 	bool wasDeleted = false;
 
 	float v1 = MathUtils::GetMagnitude(a->dx, a->dy);
@@ -586,6 +589,9 @@ void InputEvents(const SDL_Event& event) {
 		SDL_RenderSetScale(SdlUtils::renderer, event.window.data1 / (float)WindowManager::GetWindowWidth(), event.window.data2 / (float)WindowManager::GetWindowHeight());
 	}
 	if (event.type == SDL_KEYDOWN) {
+		if (event.key.keysym.scancode == SDL_SCANCODE_LSHIFT) {
+			player.Shrink();
+		}
 		if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE && !pauseKeyHeld && !gameOver) {
 			pausing = !pausing;
 			pauseKeyHeld = true;
@@ -629,6 +635,9 @@ void InputEvents(const SDL_Event& event) {
 		if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
 			pauseKeyHeld = false;
 		}
+		if (event.key.keysym.scancode == SDL_SCANCODE_LSHIFT) {
+			player.Enlarge();
+		}
 		keys[event.key.keysym.scancode] = false;
 	}
 	if (event.type == SDL_MOUSEBUTTONDOWN) {
@@ -666,7 +675,7 @@ void InputEvents(const SDL_Event& event) {
 			if (SdlUtils::SDL_PointInFRect(&mousePos, &buyBtnR) && player.buyingShield) {
 				if (std::stoi(moneyText.text) >= std::stoi(shieldPriceText.text)) {
 					player.hasShield = true;
-					shieldHealth = 10;
+					shieldHealth = 5;
 #if _DEBUG
 					std::string sText = "Shield: " + std::to_string(shieldHealth);
 					shieldHealthText.setText(robotoF, sText, { 255, 255, 255 });

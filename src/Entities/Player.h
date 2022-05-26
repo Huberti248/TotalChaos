@@ -5,7 +5,8 @@
 
 //TODO: Replace with a static variable to use it with the powerups
 #define PLAYER_SPEED 0.3
-#define DEFAULT_MAX_HEALTH 15
+#define PLAYER_SPEED_BOOST 1.3
+#define DEFAULT_MAX_HEALTH 5
 
 class Player : public Entity {
 public:
@@ -31,9 +32,19 @@ public:
 
 	void MoveBehaviour(int windowWidth, int windowHeight);
 
+	void Shrink();
+
+	void Enlarge();
+
+	bool IsInShrinkMode();
+
 	virtual SDL_Texture* GetTexture() override;
 
 private:
 	int health;
+	float originalWidth;
+	float originalHeight;
+	bool inShrinkMode;
+	float speed;
 
 };

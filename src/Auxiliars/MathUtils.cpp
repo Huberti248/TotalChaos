@@ -1,5 +1,26 @@
 #include "MathUtils.h"
 
+const SDL_FPoint MathUtils::WORLD_UP = {
+	0.0f,
+	-1.0f
+};
+
+const SDL_FPoint MathUtils::WORLD_DOWN = {
+	0.0f,
+	1.0f
+};
+
+const SDL_FPoint MathUtils::WORLD_RIGHT = {
+	1.0f,
+	0.0f
+};
+
+const SDL_FPoint MathUtils::WORLD_LEFT = {
+	-1.0f,
+	0.0f
+};
+
+
 MathUtils::MathUtils() {}
 
 MathUtils::~MathUtils() {}
@@ -59,6 +80,18 @@ SDL_FPoint MathUtils::GetNormalized(const SDL_Point& point) {
 	return res;
 }
 
+SDL_FPoint MathUtils::GetNormalized(const SDL_FPoint& point) {
+	float mag = GetMagnitude(point.x, point.y);
+
+	SDL_FPoint res = {
+		point.x / mag,
+		point.y / mag
+	};
+
+	return res;
+}
+
+
 void MathUtils::Normalize(SDL_FPoint* point) {
 	float mag = GetMagnitude(point->x, point->y);
 
@@ -85,6 +118,13 @@ SDL_FPoint MathUtils::VectorSubstract(const SDL_Point& a, const SDL_Point& b) {
 void MathUtils::VectorSubstract(SDL_Point* a, const SDL_Point& b) {
 	a->x -= b.x;
 	a->y -= b.y;
+}
+
+SDL_FPoint MathUtils::VectorAdd(const SDL_FPoint& a, const SDL_FPoint& b) {
+	return {
+		a.x + b.x,
+		a.y + b.y
+	};
 }
 
 float MathUtils::DistanceSqr(const SDL_FPoint& a, const SDL_FPoint& b) {
